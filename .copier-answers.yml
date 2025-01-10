@@ -1,0 +1,12 @@
+# Changes here will be overwritten by Copier
+AnswerStrategy: minimum
+Authors: Alberto Mengali <a.mengali@gmail.com>
+JuliaIndentation: 4
+JuliaMinVersion: '1.10'
+License: MIT
+LicenseCopyrightHolders: Alberto Mengali
+PackageName: PlutoShowHelpers
+PackageOwner: disberd
+PackageUUID: 61f21f9a-4073-5473-9260-49250f3db370
+_commit: v0.14.1
+_src_path: https://github.com/JuliaBesties/BestieTemplate.jl
