@@ -12,6 +12,15 @@ function tree_data(x, io)
     end
     return out
 end
+# Just helper function for debugging in Pluto
+function tree_data(x)
+    io = if is_inside_pluto()
+        IOContext(IOBuffer(), :is_pluto => true)
+    else
+        IOContext(IOBuffer())
+    end
+    return tree_data(x, io)
+end
 
 # Just create n tabs characters
 _tabs(n::Int) = repeat("\t", n)
@@ -57,8 +66,8 @@ function show_outside_pluto(io::IO, x)
 end
 
 # Customize shown names of type
-longname(@nospecialize(x); context=nothing) = longname(typeof(x); context)
-longname(x::DataType; context=nothing) = repr(x; context)
+longname(@nospecialize(x)) = longname(typeof(x))
+longname(x::DataType) = nameof(x) |> string
 shortname(@nospecialize(x)) = shortname(typeof(x))
 shortname(x::DataType) = nameof(x) |> string
 
@@ -76,8 +85,10 @@ By default it just translates the provided object into a NamedTuple using `ntfro
 show_namedtuple(@nospecialize(x)) = ntfromstruct(x)
 
 # This function is used for convenience to extract the wraped element for some of the types defined in this package, like HideWhenCompact
+unwrap_hide(@nospecialize(x)) = x
+unwrap_hide(@nospecialize(x::AbstractHidden)) = x.item
 unwrap(@nospecialize(x)) = x
-unwrap(x::HideWhenCompact) = x.item
+unwrap(@nospecialize(x::AbstractHidden)) = unwrap_hide(x)
 unwrap(x::AsPlutoTree) = x.element
 unwrap(x::DefaultShowOverload) = x.item
 # Used to create adapt the dict of tree_data from namedtuple to the original struct type
@@ -100,36 +111,71 @@ add_tabs(tabs::Int) = s -> let
     return String(take!(io))
 end
 
-function default_plutotree_style(class::String, hide_when_compact; tabs = 0)
-    any(hide_when_compact) || return ""
+function default_plutotree_style(class::String, nt; ntabs = 0)
     io = IOBuffer()
-    f(n) = _tabs(n)
     selector = isempty(class) ? "" : ".$class "
+    println(io, _tabs(ntabs)..., "<style>")
+    add_hide_when_compact_style!(io, nt; ntabs = ntabs+1, selector)
+    add_hide_when_full_style!(io, nt; ntabs = ntabs+1, selector)
+    hide_labels_style!(io, nt; ntabs = ntabs+1, selector)
+    println(io, _tabs(ntabs)..., "</style>")
+    return String(take!(io))
+end
+
+function add_hide_when_full_style!(io, nt; ntabs = 0, selector = "")
+    hide_when_full = map(x -> x isa Union{HideWhenFull, HideAlways}, values(nt))
+    any(hide_when_full) || return 
+    ntabs += 1
+    for (i, n) in enumerate(findall(hide_when_full))
+        print(io, _tabs(ntabs)..., selector, "pluto-tree:not(.collapsed) p-r:nth-child($(n))")
+        println(io, (i == sum(hide_when_full) ? " {" : ","))
+    end
+    ntabs += 1
+    println(io, _tabs(ntabs)..., "display: none;")
+    ntabs -= 1
+    println(io, _tabs(ntabs)..., "}")
+    return
+end
+
+function add_hide_when_compact_style!(io, nt; ntabs = 0, selector = "")
+    hide_when_compact = map(x -> x isa Union{HideWhenCompact, HideAlways}, values(nt))
+    any(hide_when_compact) || return 
     first_shown = findfirst(!, hide_when_compact)
     last_shown = findlast(!, hide_when_compact)
-    println(io, f(tabs)..., "<style>")
-    tabs += 1
+    ntabs += 1
     for (i, n) in enumerate(findall(hide_when_compact))
-        print(io, f(tabs)..., selector, "pluto-tree.collapsed p-r:nth-child($(n))")
+        print(io, _tabs(ntabs)..., selector, "pluto-tree.collapsed p-r:nth-child($(n))")
         println(io, (i == sum(hide_when_compact) ? " {" : ","))
     end
-    tabs += 1
-    println(io, f(tabs)..., "display: none;")
-    tabs -= 1
-    println(io, f(tabs)..., "}")
+    ntabs += 1
+    println(io, _tabs(ntabs)..., "display: none;")
+    ntabs -= 1
+    println(io, _tabs(ntabs)..., "}")
     if first_shown !== 1 # Remove the margin on the first shown field
-        println(io, f(tabs)..., selector, "pluto-tree.collapsed p-r:nth-child($(first_shown)) {")
-        println(io, f(tabs+1)..., "margin-left: 0;")
-        println(io, f(tabs)..., "}")
+        println(io, _tabs(ntabs)..., selector, "pluto-tree.collapsed p-r:nth-child($(first_shown)) {")
+        println(io, _tabs(ntabs+1)..., "margin-left: 0;")
+        println(io, _tabs(ntabs)..., "}")
     end
     if last_shown !== length(hide_when_compact) # Remove the comma on the last shwon element
-        println(io, f(tabs)..., selector,"pluto-tree.collapsed p-r:nth-child($(last_shown)):after {")
-        println(io, f(tabs+1)..., "content: none;")
-        println(io, f(tabs)..., "}")
+        println(io, _tabs(ntabs)..., selector,"pluto-tree.collapsed p-r:nth-child($(last_shown)):after {")
+        println(io, _tabs(ntabs+1)..., "content: none;")
+        println(io, _tabs(ntabs)..., "}")
     end
-    tabs -= 1
-    println(io, f(tabs)..., "</style>")
-    return String(take!(io))
+    return
+end
+
+function hide_labels_style!(io, nt; ntabs = 0, selector = "")
+    hide_labels = map(Base.isgensym, keys(nt))
+    any(hide_labels) || return
+    ntabs += 1
+    for (i, n) in enumerate(findall(hide_labels))
+        print(io, _tabs(ntabs)..., selector, "pluto-tree:not(.collapsed) p-r:nth-child($(n)) p-k")
+        println(io, (i == sum(hide_labels) ? " {" : ","))
+    end
+    println(io, _tabs(ntabs)..., "display: none;")
+    ntabs -= 1
+    println(io, _tabs(ntabs)..., "}")
+    return
 end
 
 # This function split a number into two parts for showing in HTML

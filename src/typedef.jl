@@ -9,7 +9,16 @@ function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     end
 end
 
-struct HideWhenCompact
+# This is used to hide some fields either in compact view, full view or always. These will default to simply forwarding show methods and are only parsed within the show methods of AsPlutoTree and DefaultShowOverload for assessing when to hide
+abstract type AbstractHidden <: CustomShowable end
+
+struct HideWhenCompact <: AbstractHidden
+    item
+end
+struct HideWhenFull <: AbstractHidden
+    item
+end
+struct HideAlways <: AbstractHidden
     item
 end
 
@@ -23,13 +32,12 @@ AsPlutoTree(element; class = nothing, style = nothing) = AsPlutoTree(element, cl
 # This basicaly replicates the show method for EmbedDisplay in Pluto
 function show_inside_pluto(io::IO, wrapped::AsPlutoTree)
     item = unwrap(wrapped)
-    nt_raw = show_namedtuple(item)
+    nt = show_namedtuple(item)
     class = @something wrapped.class random_class()
     # This is the style that will eventually hide fields when compact
-    default_style = default_plutotree_style(class, map(x -> x isa HideWhenCompact, nt_raw |> values))
+    default_style = default_plutotree_style(class, nt)
     # Remove the hide when compact wrapper now
-    nt = map(unwrap, nt_raw)
-    body = tree_data(nt, io)
+    body = tree_data(map(unwrap_hide, nt), io)
     # Modify the resulting dict 
     modify_tree_data_dict!(body, item)
     mime = MIME"application/vnd.pluto.tree+object"()
@@ -183,34 +191,37 @@ struct DefaultShowOverload <: CustomShowable
     item
 end
 
-show_inside_pluto(io::IO, x::DefaultShowOverload) = show_inside_pluto(io, AsPlutoTree(unwrap(x)))
+function show_inside_pluto(io::IO, x::DefaultShowOverload) 
+    show_inside_pluto(io, AsPlutoTree(unwrap(x)))
+end
 
 function Base.show(io::IO, mime::MIME"text/plain", x::DefaultShowOverload)
     item = unwrap(x)
-    nt_raw = show_namedtuple(item)
-    nt = map(unwrap, nt_raw)
+    nt = show_namedtuple(item)
+    f(n) = repeat(" ", n)
     println(io, repl_summary(item), ":")
     for (nm, val) in pairs(nt)
-        print(io, _tabs(1), nm, " = ")
-        show(io, val)
+        val isa Union{HideAlways, HideWhenFull} && continue
+        print(io, f(2))
+        Base.isgensym(nm) || print(io, nm, " = ")
+        show(io, unwrap_hide(val))
         println(io)
     end
 end
 
 function Base.show(io::IO, x::DefaultShowOverload)
     item = unwrap(x)
-    nt_raw = show_namedtuple(item)::NamedTuple
-    hide_when_compact = map(x -> x isa HideWhenCompact, nt_raw)
-    nt = map(unwrap, nt_raw)
+    nt = show_namedtuple(item)::NamedTuple
     compact = get(io, :compact, false)
     nio = IOContext(io, :custom_compact => true) # We use a custom compact flag mostly to deal with DualDisplayAngle
     print(nio, shortname(item), "(")
     first = true
+    SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
     for (nm, val) in pairs(nt)
-        getproperty(hide_when_compact, nm) && continue # Skip fields that should be hidden
+        val isa SHOULD_HIDE && continue # Skip fields that should be hidden
         first || print(nio, ", ")
-        compact || print(nio, nm, " = ")
-        show(nio, val)
+        compact || val isa SHOULD_HIDE || print(nio, nm, " = ")
+        show(nio, unwrap_hide(val))
         first = false
     end
     print(nio, ")")
