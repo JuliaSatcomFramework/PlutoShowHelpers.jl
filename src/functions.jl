@@ -113,13 +113,32 @@ end
 
 function default_plutotree_style(class::String, nt; ntabs = 0)
     io = IOBuffer()
-    selector = isempty(class) ? "" : ".$class "
+    selector = isempty(class) ? "" : ".$class > * > "
     println(io, _tabs(ntabs)..., "<style>")
+    add_aspluto_tree_style!(io, nt; ntabs = ntabs+1, selector)
     add_hide_when_compact_style!(io, nt; ntabs = ntabs+1, selector)
     add_hide_when_full_style!(io, nt; ntabs = ntabs+1, selector)
     hide_labels_style!(io, nt; ntabs = ntabs+1, selector)
+    add_ellipsis_style!(io, nt; ntabs = ntabs+1, selector)
     println(io, _tabs(ntabs)..., "</style>")
     return String(take!(io))
+end
+
+function add_aspluto_tree_style!(io, nt; ntabs = 0, selector = "")
+    println(io, _tabs(ntabs)..., ".as-pluto-tree {")
+    println(io, _tabs(ntabs+1)..., "white-space: normal;")
+    println(io, _tabs(ntabs)..., "}")
+end
+
+function add_ellipsis_style!(io, nt; ntabs = 0, selector = "")
+    println(io, _tabs(ntabs)..., selector, "pluto-tree.collapsed ellipsis:before {")
+    println(io, _tabs(ntabs+1)..., "content: '...';")
+    println(io, _tabs(ntabs)..., "}")
+    println(io)
+    println(io, _tabs(ntabs)..., selector, "pluto-tree:not(.collapsed) ellipsis:before {")
+    println(io, _tabs(ntabs+1)..., "content: '$VDOTS';")
+    println(io, _tabs(ntabs)..., "}")
+    return
 end
 
 function add_hide_when_full_style!(io, nt; ntabs = 0, selector = "")
@@ -127,7 +146,7 @@ function add_hide_when_full_style!(io, nt; ntabs = 0, selector = "")
     any(hide_when_full) || return 
     ntabs += 1
     for (i, n) in enumerate(findall(hide_when_full))
-        print(io, _tabs(ntabs)..., selector, "pluto-tree:not(.collapsed) p-r:nth-child($(n))")
+        print(io, _tabs(ntabs)..., selector, "pluto-tree:not(.collapsed) > * > p-r:nth-child($(n))")
         println(io, (i == sum(hide_when_full) ? " {" : ","))
     end
     ntabs += 1
@@ -144,7 +163,7 @@ function add_hide_when_compact_style!(io, nt; ntabs = 0, selector = "")
     last_shown = findlast(!, hide_when_compact)
     ntabs += 1
     for (i, n) in enumerate(findall(hide_when_compact))
-        print(io, _tabs(ntabs)..., selector, "pluto-tree.collapsed p-r:nth-child($(n))")
+        print(io, _tabs(ntabs)..., selector, "pluto-tree.collapsed > * > p-r:nth-child($(n))")
         println(io, (i == sum(hide_when_compact) ? " {" : ","))
     end
     ntabs += 1
@@ -152,12 +171,12 @@ function add_hide_when_compact_style!(io, nt; ntabs = 0, selector = "")
     ntabs -= 1
     println(io, _tabs(ntabs)..., "}")
     if first_shown !== 1 # Remove the margin on the first shown field
-        println(io, _tabs(ntabs)..., selector, "pluto-tree.collapsed p-r:nth-child($(first_shown)) {")
+        println(io, _tabs(ntabs)..., selector, "pluto-tree.collapsed > * > p-r:nth-child($(first_shown)) {")
         println(io, _tabs(ntabs+1)..., "margin-left: 0;")
         println(io, _tabs(ntabs)..., "}")
     end
     if last_shown !== length(hide_when_compact) # Remove the comma on the last shwon element
-        println(io, _tabs(ntabs)..., selector,"pluto-tree.collapsed p-r:nth-child($(last_shown)):after {")
+        println(io, _tabs(ntabs)..., selector,"pluto-tree.collapsed > * > p-r:nth-child($(last_shown)):after {")
         println(io, _tabs(ntabs+1)..., "content: none;")
         println(io, _tabs(ntabs)..., "}")
     end
@@ -169,7 +188,7 @@ function hide_labels_style!(io, nt; ntabs = 0, selector = "")
     any(hide_labels) || return
     ntabs += 1
     for (i, n) in enumerate(findall(hide_labels))
-        print(io, _tabs(ntabs)..., selector, "pluto-tree:not(.collapsed) p-r:nth-child($(n)) p-k")
+        print(io, _tabs(ntabs)..., selector, "pluto-tree:not(.collapsed) > * > p-r:nth-child($(n)) > p-k")
         println(io, (i == sum(hide_labels) ? " {" : ","))
     end
     println(io, _tabs(ntabs)..., "display: none;")
