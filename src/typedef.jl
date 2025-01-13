@@ -1,5 +1,8 @@
 abstract type CustomShowable end
 
+struct InsidePluto end
+struct OutsidePluto end
+
 function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     @nospecialize
     if is_inside_pluto(io)
@@ -32,7 +35,7 @@ AsPlutoTree(element; class = nothing, style = nothing) = AsPlutoTree(element, cl
 # This basicaly replicates the show method for EmbedDisplay in Pluto
 function show_inside_pluto(io::IO, wrapped::AsPlutoTree)
     item = unwrap(wrapped)
-    nt = show_namedtuple(item)
+    nt = show_namedtuple(item, InsidePluto())::NamedTuple
     class = @something wrapped.class random_class()
     # This is the style that will eventually hide fields when compact
     default_style = default_plutotree_style(class, nt)
@@ -197,8 +200,9 @@ end
 
 function Base.show(io::IO, mime::MIME"text/plain", x::DefaultShowOverload)
     item = unwrap(x)
-    nt = show_namedtuple(item)
+    nt = show_namedtuple(item, OutsidePluto())::NamedTuple
     f(n) = repeat(" ", n)
+    io = IOContext(io, :inside_3arg_show => true, :inside_2arg_show => false)
     println(io, repl_summary(item), ":")
     for (nm, val) in pairs(nt)
         val isa Union{HideAlways, HideWhenFull} && continue
@@ -211,9 +215,9 @@ end
 
 function Base.show(io::IO, x::DefaultShowOverload)
     item = unwrap(x)
-    nt = show_namedtuple(item)::NamedTuple
+    nt = show_namedtuple(item, OutsidePluto())::NamedTuple
     compact = get(io, :compact, false)
-    nio = IOContext(io, :custom_compact => true) # We use a custom compact flag mostly to deal with DualDisplayAngle
+    nio = IOContext(io, :custom_compact => true, :inside_2arg_show => true, :inside_3arg_show => false) # We use a custom compact flag mostly to deal with DualDisplayAngle
     print(nio, shortname(item), "(")
     first = true
     SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
@@ -230,4 +234,14 @@ end
 
 function Base.show(io::IO, mime::MIME"text/html", x::DefaultShowOverload)
     show(io, mime, AsPlutoTree(unwrap(x)))
+end
+
+struct Ellipsis <: CustomShowable end
+
+Base.show(io::IO, x::Ellipsis) = print(io, get(io, :inside_3arg_show, false) ? VDOTS : HDOTS)
+Base.show(io::IO, mime::MIME"text/plain", x::Ellipsis) = print(io, VDOTS)
+function show_inside_pluto(io::IO, x::Ellipsis)
+    show(io, MIME"text/html"(), @htl("""
+    <ellipsis></ellipsis>
+    """))
 end

@@ -74,15 +74,25 @@ shortname(x::DataType) = nameof(x) |> string
 # This needs to be overloaded if one wants custom multiline type name in the REPL
 repl_summary(@nospecialize(x)) = Base.summary(x)
 
+# This is the customize when to assume that a field of a type using DefaultShowOverload should skip the label
+function should_skip_label(io::IO, parent, field, field_name::Val)
+    @nospecialize
+    return false
+end
+
 """
-    function show_namedtuple(x) end
-This function takes an instance of a type and generate the corresponding NamedTuple specifying the fileds to show and how the content of each field should eventually be processed.
+    show_namedtuple(x)
+    show_namedtuple(x, ::InsidePluto) = show_namedtuple(x)
+    show_namedtuple(x, ::OutsidePluto) = show_namedtuple(x)
+This function takes an instance of a type and generate the corresponding NamedTuple specifying the fields to show and how the content of each field should eventually be processed.
 
 Adding a method to this function for a specific type is required for customizing how objects are shown via the convenience show methods of this package (e.g. see [`AsPlutoTree`](@ref)).
 
 By default it just translates the provided object into a NamedTuple using `ntfromstruct` from NamedTupleTools.jl.
 """
 show_namedtuple(@nospecialize(x)) = ntfromstruct(x)
+show_namedtuple(@nospecialize(x), ::InsidePluto) = show_namedtuple(x)
+show_namedtuple(@nospecialize(x), ::OutsidePluto) = show_namedtuple(x)
 
 # This function is used for convenience to extract the wraped element for some of the types defined in this package, like HideWhenCompact
 unwrap_hide(@nospecialize(x)) = x
@@ -91,6 +101,13 @@ unwrap(@nospecialize(x)) = x
 unwrap(@nospecialize(x::AbstractHidden)) = unwrap_hide(x)
 unwrap(x::AsPlutoTree) = x.element
 unwrap(x::DefaultShowOverload) = x.item
+
+function unwrap_symbol(::Val{T}) where T
+    @nospecialize
+    @assert T isa Symbol "You can only use Val wrapping symbols"
+    return T::Symbol
+end
+
 # Used to create adapt the dict of tree_data from namedtuple to the original struct type
 function modify_tree_data_dict!(d::Dict{Symbol, Any}, item)
     d[:objectid] = objectid2str(item)

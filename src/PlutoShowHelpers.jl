@@ -7,7 +7,7 @@ using HypertextLiteral: HypertextLiteral, @htl
 include("consts.jl")
 
 include("typedef.jl")
-export AsPlutoTree, DefaultShowOverload, HideWhenCompact, DualDisplayAngle, DisplayLength
+export AsPlutoTree, DefaultShowOverload, HideWhenCompact, HideWhenFull, HideAlways, DualDisplayAngle, DisplayLength, Ellipsis, InsidePluto, OutsidePluto
 
 include("functions.jl")
 
