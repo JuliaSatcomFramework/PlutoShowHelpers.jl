@@ -220,7 +220,8 @@ function Base.show(io::IO, x::DefaultShowOverload)
     for (nm, val) in pairs(nt)
         val isa SHOULD_HIDE && continue # Skip fields that should be hidden
         first || print(nio, ", ")
-        compact || val isa SHOULD_HIDE || print(nio, nm, " = ")
+        # We don't print labels by default for 2-arg show 
+        # compact || val isa SHOULD_HIDE || Base.isgensym(nm) || print(nio, nm, " = ")
         show(nio, unwrap_hide(val))
         first = false
     end
