@@ -1,6 +1,7 @@
-using PlutoShowHelpers
-using Test
+using TestItemRunner
 
-@testset "PlutoShowHelpers.jl" begin
-    @test PlutoShowHelpers.hello_world() == "Hello, World!"
+@testitem "Aqua" begin
+    using PlutoShowHelpers
+    using Aqua
+    Aqua.test_all(PlutoShowHelpers)
 end
