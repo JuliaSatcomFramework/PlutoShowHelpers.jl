@@ -4,11 +4,14 @@ using AbstractPlutoDingetjes: is_inside_pluto, AbstractPlutoDingetjes, Display.p
 using NamedTupleTools: NamedTupleTools, fieldnames, ntfromstruct
 using HypertextLiteral: HypertextLiteral, @htl
 
+export is_inside_pluto
+
 include("consts.jl")
 
 include("typedef.jl")
 export AsPlutoTree, DefaultShowOverload, HideWhenCompact, HideWhenFull, HideAlways, DualDisplayAngle, DisplayLength, Ellipsis, InsidePluto, OutsidePluto
 
-include("functions.jl")
+include("utils.jl")
 
+include("interface_functions.jl")
 end

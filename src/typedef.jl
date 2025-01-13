@@ -1,3 +1,22 @@
+"""
+    abstract type CustomShowable end
+This is the base abstract type which overloads the MIME"text/html" show method
+to dispatch to either [`show_inside_pluto`](@ref) or
+[`show_outside_pluto`](@ref) depending on whether the IO being rendered on is
+inside or outside of Pluto.
+
+The show method for `CustomShowable` is defined as follows:
+```julia
+function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
+    @nospecialize
+    if is_inside_pluto(io) # Coming from AbstractPlutoDingetjes but also re-exported by this package
+        show_inside_pluto(io, x) # Function defined in this package and to eventually be extended for custom types
+    else
+        show_outside_pluto(io, x) # Function defined in this package and to eventually be extended for custom types
+    end
+end
+```
+"""
 abstract type CustomShowable end
 
 struct InsidePluto end
@@ -25,6 +44,32 @@ struct HideAlways <: AbstractHidden
     item
 end
 
+
+""" 
+    struct AsPlutoTree <: CustomShowable
+This struct is used to wrap objects within their own show HTML method so that
+they are displayed using the standard tree-like structure used by Pluto to
+display structs.
+
+It is mostly useful when requiring  custom HTML method that is relevant outside
+of Pluto but one wants their structure to keeps showing as a tree structure
+inside Pluto.
+
+This can be done by loading  defining the following custom show method for one's own type `MyType`:
+```julia
+function Base.show(io::IO, mime::MIME"text/html", x::MyType) 
+    if is_inside_pluto(io) # This is coming from AbstractPlutoDingetjes but is also re-exported by this package
+        show(io, mime, AsPlutoTree(x))
+    else
+        # Custom non-Pluto code
+    end
+end
+```
+
+Alternatively, one can make `MyType` a subtype of `CustomShowable` which
+automatically defines the `show` method as above (see the docstring of
+[`CustomShowable`](@ref)).
+"""
 struct AsPlutoTree <: CustomShowable
     element
     class::Union{Nothing, String}
@@ -180,7 +225,8 @@ This is a type that can be used to simplify custom show for one's own types.
 To leverage the default show functionality, it is sufficient to show the instance of the desired type inside a `DefaultShowOverload` wrapper and show it directly like so:
 ```julia
 Base.show(io::IO, x::MyType) = show(io, DefaultShowOverload(x))
-Base.show(io::IO, mime::Union{MIME"text/html", MIME"text/plain"}, x::MyType) = show(io, mime, DefaultShowOverload(x))
+Base.show(io::IO, mime::MIME"text/html", x::MyType) = show(io, mime, DefaultShowOverload(x))
+Base.show(io::IO, mime::MIME"text/plain", x::MyType) = show(io, mime, DefaultShowOverload(x))
 ```
 
 Per-type customization of default show can then be achieved by optionally adding a specific method for the following functions:
@@ -188,6 +234,8 @@ Per-type customization of default show can then be achieved by optionally adding
 - [`repl_summary`](@ref)
 - [`longname`](@ref)
 - [`shortname`](@ref)
+- [`show_inside_pluto`](@ref)
+- [`show_outside_pluto`](@ref)
 
 """
 struct DefaultShowOverload <: CustomShowable
