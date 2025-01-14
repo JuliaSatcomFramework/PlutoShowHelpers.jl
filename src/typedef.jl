@@ -165,14 +165,15 @@ end
 function Base.show(io::IO, x::DualDisplayAngle)
     (; digits, sigdigits) = x
     f(x) = get(io, :full_precision, false) ? x : round(x; digits, sigdigits)
-    compact = get(io, :compact, false) || get(io, :custom_compact, false)
+    g(x) = isinteger(f(x)) ? round(Int, f(x)) : f(x)
+    compact = get(io, :compact, false) || get(io, :inside_2arg_show, false)
     rads = x.angle
     isnan(rads) && return print(io, "NaN")
     degs = rad2deg(rads)
-    print(io, repr(f(degs)), "°")
+    print(io, repr(g(degs)), "°")
     if !compact
         print(io, " (")
-        print(io, repr(f(rads)))
+        print(io, repr(g(rads)))
         print(io, " rad)")
     end
 end
@@ -193,13 +194,14 @@ end
 function Base.show(io::IO, l::DisplayLength)
     (; digits, sigdigits) = l
     f(x) = get(io, :full_precision, false) ? x : round(x; digits, sigdigits)
+    g(x) = isinteger(f(x)) ? round(Int, f(x)) : f(x)
     len = l.length
     isnan(len) && return print(io, "NaN")
     if len < 1000
-        print(io, f(len), " m")
+        print(io, g(len), " m")
     else
         len /= 1000
-        print(io, f(len), " km")
+        print(io, g(len), " km")
     end
 end
 
@@ -265,7 +267,7 @@ function Base.show(io::IO, x::DefaultShowOverload)
     item = unwrap(x)
     nt = show_namedtuple(item, OutsidePluto())::NamedTuple
     compact = get(io, :compact, false)
-    nio = IOContext(io, :custom_compact => true, :inside_2arg_show => true, :inside_3arg_show => false) # We use a custom compact flag mostly to deal with DualDisplayAngle
+    nio = IOContext(io, :inside_2arg_show => true, :inside_3arg_show => false) # We use a custom compact flag mostly to deal with DualDisplayAngle
     print(nio, shortname(item), "(")
     first = true
     SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
