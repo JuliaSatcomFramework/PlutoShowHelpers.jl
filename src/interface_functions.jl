@@ -24,8 +24,8 @@ This function defaults to calling [`show`](@ref) with MIME of type `text/plain` 
 """
 function show_outside_pluto(io::IO, x)
     @nospecialize
-    @warn "show_outside_pluto is not overloaded for $(typeof(x)), defaulting to output of show(io, MIME\"text/plain\", x)"
-    show(io, MIME"text/plain"(), x)
+    @warn "show_outside_pluto is not overloaded for $(typeof(x)), defaulting to output of show(io, x)"
+    show(io, x)
 end
 
 # Customize shown names of type
