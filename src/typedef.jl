@@ -282,9 +282,7 @@ function Base.show(io::IO, x::DefaultShowOverload)
     print(nio, ")")
 end
 
-function Base.show(io::IO, mime::MIME"text/html", x::DefaultShowOverload)
-    show(io, mime, AsPlutoTree(unwrap(x)))
-end
+show_outside_pluto(io::IO, x::DefaultShowOverload) = show_outside_pluto(io, unwrap(x))
 
 struct Ellipsis <: CustomShowable end
 
@@ -295,3 +293,4 @@ function show_inside_pluto(io::IO, x::Ellipsis)
     <ellipsis></ellipsis>
     """))
 end
+
