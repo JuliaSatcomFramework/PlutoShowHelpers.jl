@@ -1,7 +1,7 @@
 name = "PlutoShowHelpers"
 uuid = "61f21f9a-4073-5473-9260-49250f3db370"
 authors = ["Alberto Mengali <a.mengali@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 AbstractPlutoDingetjes = "6e696c72-6542-2067-7265-42206c756150"
