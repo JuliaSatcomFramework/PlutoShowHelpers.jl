@@ -50,12 +50,6 @@ unwrap(@nospecialize(x::AbstractHidden)) = unwrap_hide(x)
 unwrap(x::AsPlutoTree) = x.element
 unwrap(x::DefaultShowOverload) = x.item
 
-function unwrap_symbol(::Val{T}) where T
-    @nospecialize
-    @assert T isa Symbol "You can only use Val wrapping symbols"
-    return T::Symbol
-end
-
 # Used to create adapt the dict of tree_data from namedtuple to the original struct type
 function modify_tree_data_dict!(d::Dict{Symbol, Any}, item)
     d[:objectid] = objectid2str(item)
@@ -65,15 +59,6 @@ function modify_tree_data_dict!(d::Dict{Symbol, Any}, item)
     # We transforms fieldnames from strings to symbols
     d[:elements] = Any[(Symbol(t[1]), t[2]) for t in d[:elements]]
     return nothing
-end
-
-add_tabs(tabs::Int) = s -> let 
-    io = IOBuffer()
-    for _ in 1:tabs
-        print(io, "\t")
-    end
-    print(io, s)
-    return String(take!(io))
 end
 
 function default_plutotree_style(class::String, nt; ntabs = 0)
