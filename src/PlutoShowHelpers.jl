@@ -1,7 +1,7 @@
 module PlutoShowHelpers
 
 using AbstractPlutoDingetjes: is_inside_pluto, AbstractPlutoDingetjes, Display.published_to_js
-using NamedTupleTools: NamedTupleTools, fieldnames, ntfromstruct
+using ConstructionBase: ConstructionBase, getfields
 using HypertextLiteral: HypertextLiteral, @htl
 
 export is_inside_pluto
