@@ -4,6 +4,11 @@ This file contains the changelog for the ReferenceViews package. It follows the 
 
 ## Unreleased
 
+## [0.3.1] - 06/02/2025
+
+### Fixed
+- Fixed the km display for negative values of DisplayLength
+
 ## [0.3.0] - 06/02/2025
 This version added full code coverage to ensure there are no obvious runtime errors.
 

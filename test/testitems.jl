@@ -33,7 +33,9 @@ end
     # Test kilometers
     l = DisplayLength(1234.567)
     @test repr(l) == "1.235 km"
-    
+    l = DisplayLength(-1234.567)
+    @test repr(l) == "-1.235 km"
+
     # Test with custom digits
     l = DisplayLength(123.456, digits=1)
     @test repr(l) == "123.5 m"

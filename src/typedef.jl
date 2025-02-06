@@ -199,7 +199,7 @@ function Base.show(io::IO, l::DisplayLength)
     g(x) = isinteger(f(x)) ? round(Int, f(x)) : f(x)
     len = l.length
     isnan(len) && return print(io, "NaN")
-    if len < 1000
+    if abs(len) < 1000
         print(io, g(len), " m")
     else
         len /= 1000
