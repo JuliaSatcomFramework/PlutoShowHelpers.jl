@@ -90,7 +90,7 @@ function show_inside_pluto(io::IO, wrapped::AsPlutoTree)
     modify_tree_data_dict!(body, item)
     mime = MIME"application/vnd.pluto.tree+object"()
     result = @htl("""
-    <div class="as-pluto-tree">
+    <div class='as-pluto-tree'>
     <pluto-display class=$(class)></pluto-display><script id=$(random_class())>
         const body = $(published_to_js(body));
         const mime = $(string(mime));
@@ -123,16 +123,17 @@ end
     DualDisplayAngle(angle)
 Take an angle **in radians** and display it via `show` in both radians and degrees.
 """
-struct DualDisplayAngle <: CustomShowable
-    angle::Float64
+struct DualDisplayAngle{T} <: CustomShowable
+    angle::T
     digits::Union{Nothing, Int}
     sigdigits::Union{Nothing, Int}
-    function DualDisplayAngle(angle; digits = nothing, sigdigits = nothing)
+    function DualDisplayAngle(angle::Real; digits = nothing, sigdigits = nothing)
         @assert isnothing(digits) || isnothing(sigdigits) "You can only provide one out of digits and sigdigits"
+        angle = float(angle)
         if isnothing(digits) && isnothing(sigdigits)
             digits = 3 # Default to 3 digits
         end
-        new(angle, digits, sigdigits)
+        new{typeof(angle)}(angle, digits, sigdigits)
     end
 end
 
@@ -178,16 +179,17 @@ function Base.show(io::IO, x::DualDisplayAngle)
     end
 end
 
-struct DisplayLength
-    length::Float64
+struct DisplayLength{T} <: CustomShowable
+    length::T
     digits::Union{Nothing, Int}
     sigdigits::Union{Nothing, Int}
-    function DisplayLength(length; digits = nothing, sigdigits = nothing)
+    function DisplayLength(length::Real; digits = nothing, sigdigits = nothing)
         @assert isnothing(digits) || isnothing(sigdigits) "You can only provide one out of digits and sigdigits"
+        length = float(length)
         if isnothing(digits) && isnothing(sigdigits)
             digits = 3 # Default to 3 digits
         end
-        new(length, digits, sigdigits)
+        new{typeof(length)}(length, digits, sigdigits)
     end
 end
 
