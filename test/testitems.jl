@@ -1,7 +1,7 @@
 @testsnippet setup_basics begin
     using PlutoShowHelpers
     using Test
-    using PlutoShowHelpers: is_inside_pluto, HideWhenCompact, HideWhenFull, HideAlways, show_namedtuple, DualDisplayAngle, DisplayLength, Ellipsis, show_inside_pluto, show_outside_pluto, tree_data, unwrap, unwrap_hide, random_class
+    using PlutoShowHelpers: is_inside_pluto, HideWhenCompact, HideWhenFull, HideAlways, show_namedtuple, DualDisplayAngle, DisplayLength, Ellipsis, show_inside_pluto, show_outside_pluto, tree_data, unwrap, unwrap_hide, random_class, repl_summary
 end
 
 @testitem "Aqua" begin
@@ -67,6 +67,7 @@ end
     end
 
     ut = UtilityTest(42)
+    @test repl_summary(ut) === Base.summary(ut)
 
     @test_logs (:warn, r"This function wrapper") tree_data(ut)
 end
@@ -143,7 +144,7 @@ end
     @test !isempty(repr("text/plain", e))
 end
 
-@testitem "Inside Pluto" tags = [:after] begin
+@testitem "Inside Pluto" setup = [setup_basics] tags = [:after] begin
     # We have to load PlutoRunner in Main to "emulate" being inside Pluto
     Core.eval(Main, :(import PlutoRunner))
 
@@ -164,10 +165,14 @@ end
         a = HideWhenCompact(x.a),
         b = HideWhenFull(x.b),
         c = HideAlways(x.c),
-        d = x.d
+        var"#asd" = 3,
+        d = HideWhenCompact(x.d),
     )
 
-    wrapped = DefaultShowOverload(InPlutoStruct(1, 2, 3, 4))
+    is = InPlutoStruct(1, 2, 3, 4)
+    tree_data(is)
+
+    wrapped = DefaultShowOverload(is)
     s = repr(MIME"text/html"(), wrapped; context)
     @test contains(s, "class='as-pluto-tree'")
     @test contains(s, "const body = dummy")
