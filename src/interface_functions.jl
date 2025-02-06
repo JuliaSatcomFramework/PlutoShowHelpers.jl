@@ -53,8 +53,8 @@ The 2-arg versions can be used to have a different specialized method for showin
 when called outside or inside of Pluto. They both default to simply calling the 1-arg version.
 
 By default, the 1-arg version just translates the provided object into a
-NamedTuple using `ntfromstruct` from NamedTupleTools.jl.
+NamedTuple using `getfields` from ConstructionBase.jl.
 """
-show_namedtuple(@nospecialize(x)) = ntfromstruct(x)
+show_namedtuple(@nospecialize(x)) = getfields(x)
 show_namedtuple(@nospecialize(x), ::InsidePluto) = show_namedtuple(x)
 show_namedtuple(@nospecialize(x), ::OutsidePluto) = show_namedtuple(x)
