@@ -1,7 +1,7 @@
 @testsnippet setup_basics begin
     using PlutoShowHelpers
     using Test
-    using PlutoShowHelpers: is_inside_pluto, HideWhenCompact, HideWhenFull, HideAlways, show_namedtuple, DualDisplayAngle, DisplayLength, Ellipsis
+    using PlutoShowHelpers: is_inside_pluto, HideWhenCompact, HideWhenFull, HideAlways, show_namedtuple, DualDisplayAngle, DisplayLength, Ellipsis, show_inside_pluto, show_outside_pluto, tree_data, unwrap, unwrap_hide, random_class
 end
 
 @testitem "Aqua" begin
@@ -43,7 +43,7 @@ end
     @test repr(l) == "NaN"
 end
 
-@testitem "Utility Functions" begin
+@testitem "Utility Functions" setup = [setup_basics] begin
     using Test
     using PlutoShowHelpers: unwrap, unwrap_hide, random_class
     
@@ -61,6 +61,14 @@ end
     # Test with custom size
     class = random_class(8)
     @test length(class) == 8
+
+    struct UtilityTest
+        a::Int
+    end
+
+    ut = UtilityTest(42)
+
+    @test_logs (:warn, r"This function wrapper") tree_data(ut)
 end
 
 @testitem "AbstractHidden Types" begin
@@ -82,7 +90,7 @@ end
     @test unwrap_hide(ha) === x
 end
 
-@testitem "DefaultShowOverload" begin
+@testitem "DefaultShowOverload" setup = [setup_basics] begin
     using Test
     using PlutoShowHelpers: DefaultShowOverload, unwrap, OutsidePluto, HideWhenCompact, HideWhenFull, HideAlways
     
@@ -92,6 +100,7 @@ end
         b::String
         c::Float64
     end
+
 
     PlutoShowHelpers.show_namedtuple(t::TestStruct, ::OutsidePluto) = (;
         a = HideWhenCompact(t.a), 
@@ -103,6 +112,12 @@ end
     PlutoShowHelpers.repl_summary(::TestStruct) = "LongName"
     
     ts = TestStruct(42, "hello", 1.23)
+    nt = show_namedtuple(ts)
+    @test show_namedtuple(nt, OutsidePluto()) === nt
+    @test show_namedtuple(nt, InsidePluto()) === nt
+
+    @test_logs (:warn, r"is not overloaded") show_inside_pluto(IOBuffer(), ts)
+
     wrapped = DefaultShowOverload(ts)
 
     @test repr(wrapped) === "ShortName(1.23)" # We test hiding in compact mode
@@ -144,6 +159,14 @@ end
         c::Int
         d::Int
     end
+
+    PlutoShowHelpers.show_namedtuple(x::InPlutoStruct, ::InsidePluto) = (;
+        a = HideWhenCompact(x.a),
+        b = HideWhenFull(x.b),
+        c = HideAlways(x.c),
+        d = x.d
+    )
+
     wrapped = DefaultShowOverload(InPlutoStruct(1, 2, 3, 4))
     s = repr(MIME"text/html"(), wrapped; context)
     @test contains(s, "class='as-pluto-tree'")
