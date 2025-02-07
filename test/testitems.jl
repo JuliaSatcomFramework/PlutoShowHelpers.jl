@@ -21,6 +21,10 @@ end
     d = DualDisplayAngle(π/2, digits = 2)
     s = repr(d)
     @test s === "90° (1.57 rad)"
+
+    # Test Float32 representation
+    d = DualDisplayAngle(Float32(π/2); digits = 2)
+    @test repr(d) == "90° (1.57f0 rad)"
 end
 
 @testitem "DisplayLength" begin
@@ -39,7 +43,11 @@ end
     # Test with custom digits
     l = DisplayLength(123.456, digits=1)
     @test repr(l) == "123.5 m"
-    
+
+    # Test Float32 representation
+    l = DisplayLength(1.324f0; digits = 1)
+    @test repr(l) == "1.3f0 m"
+
     # Test with NaN
     l = DisplayLength(NaN)
     @test repr(l) == "NaN"

@@ -200,10 +200,10 @@ function Base.show(io::IO, l::DisplayLength)
     len = l.length
     isnan(len) && return print(io, "NaN")
     if abs(len) < 1000
-        print(io, g(len), " m")
+        print(io, repr(g(len)), " m")
     else
         len /= 1000
-        print(io, g(len), " km")
+        print(io, repr(g(len)), " km")
     end
 end
 

@@ -4,6 +4,10 @@ This file contains the changelog for the ReferenceViews package. It follows the 
 
 ## Unreleased
 
+## [0.3.2] - 07/02/2025
+### Fixed
+- Fixed `DisplayLength{Float32}` not printing with the `fn` suffix
+
 ## [0.3.1] - 06/02/2025
 
 ### Fixed
