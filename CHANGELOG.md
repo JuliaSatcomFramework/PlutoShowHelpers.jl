@@ -3,6 +3,9 @@
 This file contains the changelog for the ReferenceViews package. It follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ## Unreleased
+## [0.3.3] - 05/11/2025
+### Added
+- Added a convenience macro `@default_show_overload` to simplify the overload of the show methods for a given type.
 
 ## [0.3.2] - 07/02/2025
 ### Fixed

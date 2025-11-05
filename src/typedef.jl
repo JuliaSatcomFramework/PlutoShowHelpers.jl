@@ -232,6 +232,7 @@ Base.show(io::IO, x::MyType) = show(io, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/html", x::MyType) = show(io, mime, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/plain", x::MyType) = show(io, mime, DefaultShowOverload(x))
 ```
+or alternatively, by using the convenience macro [`@default_show_overload`](@ref).
 
 Per-type customization of default show can then be achieved by optionally adding a specific method for the following functions:
 - [`show_namedtuple`](@ref)

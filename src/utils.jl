@@ -155,3 +155,23 @@ function split_digits_html(val; digits = nothing, sigdigits = nothing, suffix = 
     out = "<pre class='no-block'>$full$rounded</pre>"
     return out
 end
+
+"""
+    @default_show_overload TYPE
+    
+This convenience macro simplifies the overload of the show methods for a given `TYPE` by expanding to the following three method definitions:
+```julia
+Base.show(io::IO, x::TYPE) = show(io, PlutoShowHelpers.DefaultShowOverload(x))
+Base.show(io::IO, mime::MIME"text/html", x::TYPE) = show(io, mime, PlutoShowHelpers.DefaultShowOverload(x))
+Base.show(io::IO, mime::MIME"text/plain", x::TYPE) = show(io, mime, PlutoShowHelpers.DefaultShowOverload(x))
+```
+
+See also: [`DefaultShowOverload`](@ref)
+"""
+macro default_show_overload(TYPE)
+    quote
+        Base.show(io::IO, x::$TYPE) = show(io, $DefaultShowOverload(x))
+        Base.show(io::IO, mime::MIME"text/html", x::$TYPE) = show(io, mime, $DefaultShowOverload(x))
+        Base.show(io::IO, mime::MIME"text/plain", x::$TYPE) = show(io, mime, $DefaultShowOverload(x))
+    end |> esc
+end
