@@ -12,6 +12,7 @@ include("typedef.jl")
 export AsPlutoTree, DefaultShowOverload, HideWhenCompact, HideWhenFull, HideAlways, DualDisplayAngle, DisplayLength, Ellipsis, InsidePluto, OutsidePluto
 
 include("utils.jl")
+export @default_show_overload
 
 include("interface_functions.jl")
 end

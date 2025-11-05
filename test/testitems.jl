@@ -199,3 +199,25 @@ end
 end
 
 
+@testitem "DefaultShowOverload Macro" setup = [setup_basics] begin  
+    struct ShowTest
+        a::Int
+        b::String
+        c::Float64
+    end
+
+    struct MAH end
+
+    @default_show_overload Union{ShowTest, MAH}
+
+    @test which(Base.show, (IO, ShowTest)) == which(Base.show, (IO, MAH))
+
+    PlutoShowHelpers.show_namedtuple(::ShowTest, ::OutsidePluto) = (;
+        only = "Override!"
+    )
+
+    st = ShowTest(1, "hello", 1.23)
+    @test contains(repr(st), "Override!")
+    @test contains(repr(MIME"text/html"(), st), "Override!")
+    @test contains(repr(MIME"text/plain"(), st), "Override!")
+end
