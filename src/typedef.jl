@@ -81,6 +81,7 @@ AsPlutoTree(element; class = nothing, style = nothing) = AsPlutoTree(element, cl
 function show_inside_pluto(io::IO, wrapped::AsPlutoTree)
     item = unwrap(wrapped)
     nt = show_namedtuple(item, InsidePluto())::NamedTuple
+    id = "plutotree_display_id"
     class = @something wrapped.class random_class()
     # This is the style that will eventually hide fields when compact
     default_style = default_plutotree_style(class, nt)
@@ -91,7 +92,7 @@ function show_inside_pluto(io::IO, wrapped::AsPlutoTree)
     mime = MIME"application/vnd.pluto.tree+object"()
     result = @htl("""
     <div class='as-pluto-tree'>
-    <pluto-display class=$(class)></pluto-display><script id=$(random_class())>
+    <pluto-display class=$(class)></pluto-display><script id=$(id)>
         const body = $(published_to_js(body));
         const mime = $(string(mime));
         
