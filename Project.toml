@@ -1,6 +1,6 @@
 name = "PlutoShowHelpers"
 uuid = "61f21f9a-4073-5473-9260-49250f3db370"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["Alberto Mengali <a.mengali@gmail.com>"]
 
 [deps]
