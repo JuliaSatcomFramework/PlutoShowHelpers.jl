@@ -7,9 +7,7 @@ This file contains the changelog for the ReferenceViews package. It follows the 
 ## [0.3.5] - 2026-05-25
 
 ### Added
-- `with_iocontext(f, io, pairs...)` — executes `f` with an enriched `IOContext` that is also stored in a package-scoped `ScopedValue` (`CURRENT_IO`), making the context accessible throughout the call stack.
-- `get_from_iocontext(key, default)` — retrieves a value from the active `CURRENT_IO` context; intended for use in overloads of `shortname`/`longname` and other helpers that have no direct access to the `IO` argument.
-- All built-in `show` entry points (`CustomShowable`, `DefaultShowOverload`, `Ellipsis`) now set `:input_mime` in the context, enabling downstream code to detect whether it is inside a 2-arg, 3-arg text/plain, or 3-arg text/html show call.
+- `CONTEXT` — a package-scoped `ScopedValue` holding a `Dict{Any,Any}`. Types enabling PlutoShowHelpers functionality with `@default_show_overload` can use this to potentially have greater control on how to exploit the show machinery. For the moment kept as experimental.
 
 ## [0.3.4] - 2025-05-11
 
