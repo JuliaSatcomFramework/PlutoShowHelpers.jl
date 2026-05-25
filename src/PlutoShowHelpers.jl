@@ -3,6 +3,7 @@ module PlutoShowHelpers
 using AbstractPlutoDingetjes: is_inside_pluto, AbstractPlutoDingetjes, Display.published_to_js
 using ConstructionBase: ConstructionBase, getfields
 using HypertextLiteral: HypertextLiteral, @htl
+using ScopedValues: ScopedValues, ScopedValue
 
 export is_inside_pluto
 

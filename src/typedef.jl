@@ -24,10 +24,12 @@ struct OutsidePluto end
 
 function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     @nospecialize
-    if is_inside_pluto(io)
-        show_inside_pluto(io, x)
-    else
-        show_outside_pluto(io, x)
+    with_iocontext(io, :input_mime => mime) do io
+        if is_inside_pluto(io)
+            show_inside_pluto(io, x)
+        else
+            show_outside_pluto(io, x)
+        end
     end
 end
 
@@ -168,7 +170,7 @@ function Base.show(io::IO, x::DualDisplayAngle)
     (; digits, sigdigits) = x
     f(x) = get(io, :full_precision, false) ? x : round(x; digits, sigdigits)
     g(x) = isinteger(f(x)) ? round(Int, f(x)) : f(x)
-    compact = get(io, :compact, false) || get(io, :inside_2arg_show, false)
+    compact = get(io, :compact, false) || get_from_iocontext(:input_mime, missing) === nothing # We only consider compact if we inside an another plutoshowhelpers show method that was caled specificaly with 2 arg show
     rads = x.angle
     isnan(rads) && return print(io, "NaN")
     degs = rad2deg(rads)
@@ -255,46 +257,46 @@ end
 function Base.show(io::IO, mime::MIME"text/plain", x::DefaultShowOverload)
     item = unwrap(x)
     nt = show_namedtuple(item, OutsidePluto())::NamedTuple
-    f(n) = repeat(" ", n)
-    io = IOContext(io, :inside_3arg_show => true, :inside_2arg_show => false)
-    println(io, repl_summary(item), ":")
-    for (nm, val) in pairs(nt)
-        val isa Union{HideAlways, HideWhenFull} && continue
-        print(io, f(2))
-        Base.isgensym(nm) || print(io, nm, " = ")
-        show(io, unwrap_hide(val))
-        println(io)
+    with_iocontext(io, :input_mime => mime) do io
+        f(n) = repeat(" ", n)
+        println(io, repl_summary(item), ":")
+        for (nm, val) in pairs(nt)
+            val isa Union{HideAlways, HideWhenFull} && continue
+            print(io, f(2))
+            Base.isgensym(nm) || print(io, nm, " = ")
+            show(io, unwrap_hide(val))
+            println(io)
+        end
     end
 end
 
 function Base.show(io::IO, x::DefaultShowOverload)
     item = unwrap(x)
     nt = show_namedtuple(item, OutsidePluto())::NamedTuple
-    compact = get(io, :compact, false)
-    nio = IOContext(io, :inside_2arg_show => true, :inside_3arg_show => false) # We use a custom compact flag mostly to deal with DualDisplayAngle
-    print(nio, shortname(item), "(")
-    first = true
-    SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
-    for (nm, val) in pairs(nt)
-        val isa SHOULD_HIDE && continue # Skip fields that should be hidden
-        first || print(nio, ", ")
-        # We don't print labels by default for 2-arg show 
-        # compact || val isa SHOULD_HIDE || Base.isgensym(nm) || print(nio, nm, " = ")
-        show(nio, unwrap_hide(val))
-        first = false
+    with_iocontext(io, :input_mime => nothing) do nio
+        print(nio, shortname(item), "(")
+        first = true
+        SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
+        for (nm, val) in pairs(nt)
+            val isa SHOULD_HIDE && continue # Skip fields that should be hidden
+            first || print(nio, ", ")
+            # We don't print labels by default for 2-arg show 
+            # compact || val isa SHOULD_HIDE || Base.isgensym(nm) || print(nio, nm, " = ")
+            show(nio, unwrap_hide(val))
+            first = false
+        end
+        print(nio, ")")
     end
-    print(nio, ")")
 end
 
 show_outside_pluto(io::IO, x::DefaultShowOverload) = show_outside_pluto(io, unwrap(x))
 
 struct Ellipsis <: CustomShowable end
 
-Base.show(io::IO, x::Ellipsis) = print(io, get(io, :inside_3arg_show, false) ? VDOTS : HDOTS)
+Base.show(io::IO, x::Ellipsis) = print(io, get_from_iocontext(:input_mime, missing) isa MIME ? VDOTS : HDOTS)
 Base.show(io::IO, mime::MIME"text/plain", x::Ellipsis) = print(io, VDOTS)
 function show_inside_pluto(io::IO, x::Ellipsis)
     show(io, MIME"text/html"(), @htl("""
     <ellipsis></ellipsis>
     """))
 end
-

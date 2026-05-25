@@ -58,3 +58,15 @@ NamedTuple using `getfields` from ConstructionBase.jl.
 show_namedtuple(@nospecialize(x)) = getfields(x)
 show_namedtuple(@nospecialize(x), ::InsidePluto) = show_namedtuple(x)
 show_namedtuple(@nospecialize(x), ::OutsidePluto) = show_namedtuple(x)
+
+function with_iocontext(f, io, ps::Pair{Symbol}...)
+    # Create the new IO context
+    nio = IOContext(io, ps...)
+    # Execute the provided function with the new IO context as only argument
+    f(nio)
+end
+
+function get_from_iocontext(key, default; nothrow = true)
+    isassigned(CURRENT_IO) || nothrow ? (return default) : throw(ArgumentError("No current IO context is not set, this function should only be called from show methods coming from PlutoShowHelpers."))
+    get(CURRENT_IO[], key, default)
+end
