@@ -141,6 +141,32 @@ end
     @test unwrap(wrapped) === ts
 end
 
+@testitem "print_2arg_names" setup = [setup_basics] begin
+    using PlutoShowHelpers: CONTEXT, DefaultShowOverload, OutsidePluto
+
+    struct P2ArgStruct
+        a::Int
+        b::Int
+        c::Int
+    end
+
+    # show_namedtuple mutates CONTEXT[] to opt :b into label printing in 2-arg show
+    PlutoShowHelpers.show_namedtuple(t::P2ArgStruct, ::OutsidePluto) = begin
+        CONTEXT[][:print_2arg_names] = (:b,)
+        (; a = t.a, b = t.b, c = t.c)
+    end
+    PlutoShowHelpers.shortname(::P2ArgStruct) = "P2A"
+    PlutoShowHelpers.repl_summary(::P2ArgStruct) = "P2ArgStruct"
+
+    wrapped = DefaultShowOverload(P2ArgStruct(1, 2, 3))
+
+    # 2-arg show: only :b has a label
+    @test repr(wrapped) == "P2A(1, b = 2, 3)"
+
+    # 3-arg show: all labels shown regardless (unaffected by :print_2arg_names)
+    @test repr(MIME"text/plain"(), wrapped) == "P2ArgStruct:\n  a = 1\n  b = 2\n  c = 3\n"
+end
+
 @testitem "Ellipsis" begin
     using Test
     using PlutoShowHelpers: Ellipsis

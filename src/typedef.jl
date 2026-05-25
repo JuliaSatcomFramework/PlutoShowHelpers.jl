@@ -277,11 +277,12 @@ function Base.show(io::IO, x::DefaultShowOverload)
         print(io, shortname(item), "(")
         first = true
         SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
+        symbols_to_show = get(CONTEXT[], :print_2arg_names, ())
         for (nm, val) in pairs(nt)
             val isa SHOULD_HIDE && continue # Skip fields that should be hidden
             first || print(io, ", ")
-            # We don't print labels by default for 2-arg show 
-            # compact || val isa SHOULD_HIDE || Base.isgensym(nm) || print(nio, nm, " = ")
+            # We default to not showing labels in 2-arg show, but we can override this with `:print_2arg_names` in CONTEXT. We still avoid printing labels for gensymmed fields.
+            Base.isgensym(nm) || nm ∉ symbols_to_show || print(io, nm, " = ")
             show(io, unwrap_hide(val))
             first = false
         end
