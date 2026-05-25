@@ -199,6 +199,65 @@ end
 end
 
 
+@testitem "IOContext helpers" setup = [setup_basics] begin
+    using PlutoShowHelpers: with_iocontext, get_from_iocontext, DefaultShowOverload, OutsidePluto
+
+    # Outside any context: always returns default
+    @test get_from_iocontext(:test_key, :default) === :default
+    @test get_from_iocontext(:test_key, missing) === missing
+
+    # Inside with_iocontext: value is accessible both via get(io,...) and get_from_iocontext
+    io = IOBuffer()
+    with_iocontext(io, :test_key => :value) do nio
+        @test get_from_iocontext(:test_key, :default) === :value
+        @test get(nio, :test_key, :default) === :value
+    end
+
+    # After the block the ScopedValue is restored → default again
+    @test get_from_iocontext(:test_key, :default) === :default
+
+    # Nested with_iocontext: inner scope adds keys without losing outer ones
+    with_iocontext(io, :outer => 1) do nio
+        @test get_from_iocontext(:outer, missing) === 1
+        with_iocontext(nio, :inner => 2) do nnio
+            @test get_from_iocontext(:outer, missing) === 1
+            @test get_from_iocontext(:inner, missing) === 2
+        end
+        @test get_from_iocontext(:inner, missing) === missing  # gone after inner block
+    end
+
+    # Main use-case: shortname adapts based on whether it is called from inside a
+    # PlutoShowHelpers show method.  :input_mime === missing  → no context active.
+    #                               :input_mime === nothing  → inside 2-arg show.
+    #                               :input_mime isa MIME     → inside 3-arg show.
+    struct IOCtxTestStruct
+        v::Int
+    end
+    PlutoShowHelpers.show_namedtuple(t::IOCtxTestStruct, ::OutsidePluto) = (; v = t.v)
+    PlutoShowHelpers.shortname(::IOCtxTestStruct) =
+        get_from_iocontext(:input_mime, missing) === missing ? "Full" : "Short"
+
+    # Called without any show context → "Full"
+    @test PlutoShowHelpers.shortname(IOCtxTestStruct(1)) == "Full"
+
+    # Inside DefaultShowOverload's 2-arg show → :input_mime => nothing → "Short"
+    @test repr(DefaultShowOverload(IOCtxTestStruct(1))) == "Short(1)"
+
+    # Inside any with_iocontext with a MIME value → context is active → "Short"
+    with_iocontext(IOBuffer(), :input_mime => MIME"text/plain"()) do _
+        @test PlutoShowHelpers.shortname(IOCtxTestStruct(1)) == "Short"
+    end
+
+    # DualDisplayAngle is compact when nested inside a 2-arg DefaultShowOverload show
+    struct WrapsDDA
+        angle::DualDisplayAngle
+    end
+    PlutoShowHelpers.show_namedtuple(t::WrapsDDA, ::OutsidePluto) = (; angle = t.angle)
+    w = WrapsDDA(DualDisplayAngle(π/2))
+    s = repr(DefaultShowOverload(w))
+    @test !contains(s, "rad")  # compact form omits the radians part
+end
+
 @testitem "DefaultShowOverload Macro" setup = [setup_basics] begin  
     struct ShowTest
         a::Int

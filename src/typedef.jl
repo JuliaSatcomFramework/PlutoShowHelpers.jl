@@ -170,7 +170,7 @@ function Base.show(io::IO, x::DualDisplayAngle)
     (; digits, sigdigits) = x
     f(x) = get(io, :full_precision, false) ? x : round(x; digits, sigdigits)
     g(x) = isinteger(f(x)) ? round(Int, f(x)) : f(x)
-    compact = get(io, :compact, false) || get_from_iocontext(:input_mime, missing) === nothing # We only consider compact if we inside an another plutoshowhelpers show method that was caled specificaly with 2 arg show
+    compact = get(io, :compact, false) || get(io, :input_mime, missing) === nothing # compact when called from 2-arg DefaultShowOverload show (:input_mime => nothing)
     rads = x.angle
     isnan(rads) && return print(io, "NaN")
     degs = rad2deg(rads)
@@ -293,7 +293,7 @@ show_outside_pluto(io::IO, x::DefaultShowOverload) = show_outside_pluto(io, unwr
 
 struct Ellipsis <: CustomShowable end
 
-Base.show(io::IO, x::Ellipsis) = print(io, get_from_iocontext(:input_mime, missing) isa MIME ? VDOTS : HDOTS)
+Base.show(io::IO, x::Ellipsis) = print(io, get(io, :input_mime, missing) isa MIME ? VDOTS : HDOTS)
 Base.show(io::IO, mime::MIME"text/plain", x::Ellipsis) = print(io, VDOTS)
 function show_inside_pluto(io::IO, x::Ellipsis)
     show(io, MIME"text/html"(), @htl("""
