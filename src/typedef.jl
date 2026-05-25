@@ -5,7 +5,7 @@ to dispatch to either [`show_inside_pluto`](@ref) or
 [`show_outside_pluto`](@ref) depending on whether the IO being rendered on is
 inside or outside of Pluto.
 
-The show method for `CustomShowable` is defined as follows:
+The `show` method for `CustomShowable` is functionally equivalent to:
 ```julia
 function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     @nospecialize
@@ -16,6 +16,8 @@ function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     end
 end
 ```
+The actual implementation additionally tracks rendering context, but it
+preserves the same dispatch behavior shown above.
 """
 abstract type CustomShowable end
 
@@ -235,7 +237,9 @@ Base.show(io::IO, x::MyType) = show(io, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/html", x::MyType) = show(io, mime, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/plain", x::MyType) = show(io, mime, DefaultShowOverload(x))
 ```
-or alternatively, by using the convenience macro [`@default_show_overload`](@ref).
+or alternatively, by using the convenience macro
+[`@default_show_overload`](@ref), which expands to functionally equivalent
+method definitions.
 
 Per-type customization of default show can then be achieved by optionally adding a specific method for the following functions:
 - [`show_namedtuple`](@ref)
