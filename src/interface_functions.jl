@@ -79,7 +79,7 @@ with_iocontext(io, :my_flag => true) do nio
 end
 ```
 """
-function with_iocontext(f, io, ps::Pair{Symbol}...)
+function with_iocontext(f, io::IO, ps::Pair{Symbol}...)
     nio = IOContext(io, ps...)
     ScopedValues.with(CURRENT_IO => nio) do
         f(nio)
@@ -120,9 +120,9 @@ end
 """
 function get_from_iocontext(key, default; nothrow = true)
     if !isassigned(CURRENT_IO)
-        nothrow && return default 
+        nothrow && return default
         throw(ArgumentError(
-            "No current IO context is set; this function should only be called from show methods using PlutoShowHelpers."))
+            "No current IO context is set; this function is only valid inside a `with_iocontext` block."))
     end
     get(CURRENT_IO[], key, default)
 end

@@ -24,11 +24,11 @@ struct OutsidePluto end
 
 function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     @nospecialize
-    with_iocontext(io, :input_mime => mime) do io
-        if is_inside_pluto(io)
-            show_inside_pluto(io, x)
+    with_iocontext(io, :input_mime => mime) do nio
+        if is_inside_pluto(nio)
+            show_inside_pluto(nio, x)
         else
-            show_outside_pluto(io, x)
+            show_outside_pluto(nio, x)
         end
     end
 end
@@ -257,15 +257,15 @@ end
 function Base.show(io::IO, mime::MIME"text/plain", x::DefaultShowOverload)
     item = unwrap(x)
     nt = show_namedtuple(item, OutsidePluto())::NamedTuple
-    with_iocontext(io, :input_mime => mime) do io
+    with_iocontext(io, :input_mime => mime) do nio
         f(n) = repeat(" ", n)
-        println(io, repl_summary(item), ":")
+        println(nio, repl_summary(item), ":")
         for (nm, val) in pairs(nt)
             val isa Union{HideAlways, HideWhenFull} && continue
-            print(io, f(2))
-            Base.isgensym(nm) || print(io, nm, " = ")
-            show(io, unwrap_hide(val))
-            println(io)
+            print(nio, f(2))
+            Base.isgensym(nm) || print(nio, nm, " = ")
+            show(nio, unwrap_hide(val))
+            println(nio)
         end
     end
 end
