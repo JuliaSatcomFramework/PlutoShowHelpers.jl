@@ -4,8 +4,6 @@ This file contains the changelog for the ReferenceViews package. It follows the 
 
 ## Unreleased
 
-## [0.3.5] - 2026-05-25
-
 ### Added
 - `CONTEXT` — a package-scoped `ScopedValue` holding a `Dict{Any,Any}`. Types enabling PlutoShowHelpers functionality with `@default_show_overload` can use this to potentially have greater control on how to exploit the show machinery. For the moment kept as experimental.
 - Added an experimental way to specify some fields' labels to still be shown inside the 2-arg show, relying on the newly introduced CONTEXT
