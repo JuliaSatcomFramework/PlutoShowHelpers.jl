@@ -5,7 +5,7 @@ to dispatch to either [`show_inside_pluto`](@ref) or
 [`show_outside_pluto`](@ref) depending on whether the IO being rendered on is
 inside or outside of Pluto.
 
-The show method for `CustomShowable` is defined as follows:
+The `show` method for `CustomShowable` is functionally equivalent to:
 ```julia
 function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     @nospecialize
@@ -16,6 +16,8 @@ function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     end
 end
 ```
+The actual implementation additionally tracks rendering context, but it
+preserves the same dispatch behavior shown above.
 """
 abstract type CustomShowable end
 
@@ -24,10 +26,12 @@ struct OutsidePluto end
 
 function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
     @nospecialize
-    if is_inside_pluto(io)
-        show_inside_pluto(io, x)
-    else
-        show_outside_pluto(io, x)
+    ScopedValues.with(CONTEXT => merge(CONTEXT[], Dict(MIME => mime, IO => io))) do
+        if is_inside_pluto(io)
+            show_inside_pluto(io, x)
+        else
+            show_outside_pluto(io, x)
+        end
     end
 end
 
@@ -168,7 +172,7 @@ function Base.show(io::IO, x::DualDisplayAngle)
     (; digits, sigdigits) = x
     f(x) = get(io, :full_precision, false) ? x : round(x; digits, sigdigits)
     g(x) = isinteger(f(x)) ? round(Int, f(x)) : f(x)
-    compact = get(io, :compact, false) || get(io, :inside_2arg_show, false)
+    compact = get(io, :compact, false) || get(CONTEXT[], MIME, missing) === nothing # compact when called from 2-arg DefaultShowOverload show (MIME => nothing)
     rads = x.angle
     isnan(rads) && return print(io, "NaN")
     degs = rad2deg(rads)
@@ -233,7 +237,9 @@ Base.show(io::IO, x::MyType) = show(io, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/html", x::MyType) = show(io, mime, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/plain", x::MyType) = show(io, mime, DefaultShowOverload(x))
 ```
-or alternatively, by using the convenience macro [`@default_show_overload`](@ref).
+or alternatively, by using the convenience macro
+[`@default_show_overload`](@ref), which expands to functionally equivalent
+method definitions.
 
 Per-type customization of default show can then be achieved by optionally adding a specific method for the following functions:
 - [`show_namedtuple`](@ref)
@@ -254,47 +260,48 @@ end
 
 function Base.show(io::IO, mime::MIME"text/plain", x::DefaultShowOverload)
     item = unwrap(x)
-    nt = show_namedtuple(item, OutsidePluto())::NamedTuple
-    f(n) = repeat(" ", n)
-    io = IOContext(io, :inside_3arg_show => true, :inside_2arg_show => false)
-    println(io, repl_summary(item), ":")
-    for (nm, val) in pairs(nt)
-        val isa Union{HideAlways, HideWhenFull} && continue
-        print(io, f(2))
-        Base.isgensym(nm) || print(io, nm, " = ")
-        show(io, unwrap_hide(val))
-        println(io)
+    ScopedValues.with(CONTEXT => merge(CONTEXT[], Dict(MIME => mime, IO => io))) do
+        nt = show_namedtuple(item, OutsidePluto())::NamedTuple
+        f(n) = repeat(" ", n)
+        println(io, repl_summary(item), ":")
+        for (nm, val) in pairs(nt)
+            val isa Union{HideAlways, HideWhenFull} && continue
+            print(io, f(2))
+            Base.isgensym(nm) || print(io, nm, " = ")
+            show(io, unwrap_hide(val))
+            println(io)
+        end
     end
 end
 
 function Base.show(io::IO, x::DefaultShowOverload)
     item = unwrap(x)
-    nt = show_namedtuple(item, OutsidePluto())::NamedTuple
-    compact = get(io, :compact, false)
-    nio = IOContext(io, :inside_2arg_show => true, :inside_3arg_show => false) # We use a custom compact flag mostly to deal with DualDisplayAngle
-    print(nio, shortname(item), "(")
-    first = true
-    SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
-    for (nm, val) in pairs(nt)
-        val isa SHOULD_HIDE && continue # Skip fields that should be hidden
-        first || print(nio, ", ")
-        # We don't print labels by default for 2-arg show 
-        # compact || val isa SHOULD_HIDE || Base.isgensym(nm) || print(nio, nm, " = ")
-        show(nio, unwrap_hide(val))
-        first = false
+    ScopedValues.with(CONTEXT => merge(CONTEXT[], Dict(MIME => nothing, IO => io))) do 
+        nt = show_namedtuple(item, OutsidePluto())::NamedTuple
+        print(io, shortname(item), "(")
+        first = true
+        SHOULD_HIDE = Union{HideAlways, HideWhenCompact}
+        symbols_to_show = get(CONTEXT[], :print_2arg_names, ())
+        for (nm, val) in pairs(nt)
+            val isa SHOULD_HIDE && continue # Skip fields that should be hidden
+            first || print(io, ", ")
+            # We default to not showing labels in 2-arg show, but we can override this with `:print_2arg_names` in CONTEXT. We still avoid printing labels for gensymmed fields.
+            Base.isgensym(nm) || nm ∉ symbols_to_show || print(io, nm, " = ")
+            show(io, unwrap_hide(val))
+            first = false
+        end
+        print(io, ")")
     end
-    print(nio, ")")
 end
 
 show_outside_pluto(io::IO, x::DefaultShowOverload) = show_outside_pluto(io, unwrap(x))
 
 struct Ellipsis <: CustomShowable end
 
-Base.show(io::IO, x::Ellipsis) = print(io, get(io, :inside_3arg_show, false) ? VDOTS : HDOTS)
+Base.show(io::IO, x::Ellipsis) = print(io, get(CONTEXT[], MIME, missing) isa MIME ? VDOTS : HDOTS)
 Base.show(io::IO, mime::MIME"text/plain", x::Ellipsis) = print(io, VDOTS)
 function show_inside_pluto(io::IO, x::Ellipsis)
     show(io, MIME"text/html"(), @htl("""
     <ellipsis></ellipsis>
     """))
 end
-

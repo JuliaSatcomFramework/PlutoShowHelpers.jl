@@ -3,7 +3,12 @@
 This file contains the changelog for the ReferenceViews package. It follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ## Unreleased
-## [0.3.4] - 05/11/2025
+
+### Added
+- `CONTEXT` — a package-scoped `ScopedValue` holding a `Dict{Any,Any}`. Types enabling PlutoShowHelpers functionality with `@default_show_overload` can use this to potentially have greater control on how to exploit the show machinery. For the moment kept as experimental.
+- Added an experimental way to specify some fields' labels to still be shown inside the 2-arg show, relying on the newly introduced CONTEXT
+
+## [0.3.4] - 2025-05-11
 
 ### Fixed
 - Collapse status of PlutoTree objects should now persist at least upon reactive re-run of a cell (not with direct manual rerun)

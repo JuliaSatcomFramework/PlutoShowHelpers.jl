@@ -141,6 +141,32 @@ end
     @test unwrap(wrapped) === ts
 end
 
+@testitem "print_2arg_names" setup = [setup_basics] begin
+    using PlutoShowHelpers: CONTEXT, DefaultShowOverload, OutsidePluto
+
+    struct P2ArgStruct
+        a::Int
+        b::Int
+        c::Int
+    end
+
+    # show_namedtuple mutates CONTEXT[] to opt :b into label printing in 2-arg show
+    PlutoShowHelpers.show_namedtuple(t::P2ArgStruct, ::OutsidePluto) = begin
+        CONTEXT[][:print_2arg_names] = (:b,)
+        (; a = t.a, b = t.b, c = t.c)
+    end
+    PlutoShowHelpers.shortname(::P2ArgStruct) = "P2A"
+    PlutoShowHelpers.repl_summary(::P2ArgStruct) = "P2ArgStruct"
+
+    wrapped = DefaultShowOverload(P2ArgStruct(1, 2, 3))
+
+    # 2-arg show: only :b has a label
+    @test repr(wrapped) == "P2A(1, b = 2, 3)"
+
+    # 3-arg show: all labels shown regardless (unaffected by :print_2arg_names)
+    @test repr(MIME"text/plain"(), wrapped) == "P2ArgStruct:\n  a = 1\n  b = 2\n  c = 3\n"
+end
+
 @testitem "Ellipsis" begin
     using Test
     using PlutoShowHelpers: Ellipsis
@@ -198,6 +224,35 @@ end
     @test contains(s, "<ellipsis></ellipsis>")
 end
 
+
+@testitem "CONTEXT ScopedValue" setup = [setup_basics] begin
+    using PlutoShowHelpers: CONTEXT, DefaultShowOverload, OutsidePluto, Ellipsis
+
+    @test isempty(CONTEXT[])
+
+    struct CTXTestStruct
+        v::Int
+    end
+    PlutoShowHelpers.show_namedtuple(t::CTXTestStruct, ::OutsidePluto) = (; v = t.v)
+    PlutoShowHelpers.shortname(::CTXTestStruct) =
+        get(CONTEXT[], MIME, missing) === missing ? "Full" : "Short"
+
+    @test PlutoShowHelpers.shortname(CTXTestStruct(1)) == "Full"
+    @test repr(DefaultShowOverload(CTXTestStruct(1))) == "Short(1)"
+
+    struct WrapsDDA
+        angle::DualDisplayAngle
+    end
+    PlutoShowHelpers.show_namedtuple(t::WrapsDDA, ::OutsidePluto) = (; angle = t.angle)
+    s = repr(DefaultShowOverload(WrapsDDA(DualDisplayAngle(π/2))))
+    @test !contains(s, "rad")  # compact form omits the radians part
+
+    struct HasEllipsis end
+    PlutoShowHelpers.show_namedtuple(::HasEllipsis, ::OutsidePluto) = (; var"#e" = Ellipsis())
+    wrapped_e = DefaultShowOverload(HasEllipsis())
+    @test contains(repr(MIME"text/plain"(), wrapped_e), "\u22ee")  # 3-arg: VDOTS
+    @test contains(repr(wrapped_e), "\u2026")                      # 2-arg: HDOTS
+end
 
 @testitem "DefaultShowOverload Macro" setup = [setup_basics] begin  
     struct ShowTest
