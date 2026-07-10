@@ -21,7 +21,9 @@ preserves the same dispatch behavior shown above.
 """
 abstract type CustomShowable end
 
+"""Dispatch tag for [`show_namedtuple`](@ref) specialization inside Pluto."""
 struct InsidePluto end
+"""Dispatch tag for [`show_namedtuple`](@ref) specialization outside Pluto."""
 struct OutsidePluto end
 
 function Base.show(io::IO, mime::MIME"text/html", x::CustomShowable)
@@ -38,12 +40,15 @@ end
 # This is used to hide some fields either in compact view, full view or always. These will default to simply forwarding show methods and are only parsed within the show methods of AsPlutoTree and DefaultShowOverload for assessing when to hide
 abstract type AbstractHidden <: CustomShowable end
 
+"""Wrap a field value to hide it in compact / collapsed views (2-arg show, Pluto collapsed tree)."""
 struct HideWhenCompact <: AbstractHidden
     item
 end
+"""Wrap a field value to hide it in expanded / full views (3-arg show, Pluto expanded tree)."""
 struct HideWhenFull <: AbstractHidden
     item
 end
+"""Wrap a field value to hide it in all views."""
 struct HideAlways <: AbstractHidden
     item
 end
@@ -55,11 +60,11 @@ This struct is used to wrap objects within their own show HTML method so that
 they are displayed using the standard tree-like structure used by Pluto to
 display structs.
 
-It is mostly useful when requiring  custom HTML method that is relevant outside
-of Pluto but one wants their structure to keeps showing as a tree structure
+It is mostly useful when requiring a custom HTML method that is relevant outside
+of Pluto but one wants their structure to keep showing as a tree structure
 inside Pluto.
 
-This can be done by loading  defining the following custom show method for one's own type `MyType`:
+This can be done by defining the following custom show method for one's own type `MyType`:
 ```julia
 function Base.show(io::IO, mime::MIME"text/html", x::MyType) 
     if is_inside_pluto(io) # This is coming from AbstractPlutoDingetjes but is also re-exported by this package
@@ -184,6 +189,11 @@ function Base.show(io::IO, x::DualDisplayAngle)
     end
 end
 
+"""
+    DisplayLength(length; digits=nothing, sigdigits=nothing)
+Display a length in meters or kilometers (switches at `abs(length) ≥ 1000`)
+with configurable rounding.
+"""
 struct DisplayLength{T} <: CustomShowable
     length::T
     digits::Union{Nothing, Int}
@@ -214,8 +224,14 @@ end
 
 function show_inside_pluto(io::IO, x::DisplayLength)
     (; digits, sigdigits) = x
-    suffix = x.length < 1000 ? " m" : " km"
-    len = """<span class='m'>$(split_digits_html(x.length; digits, sigdigits, suffix))</span>"""
+    val = x.length
+    if abs(val) < 1000
+        suffix = " m"
+    else
+        val /= 1000
+        suffix = " km"
+    end
+    len = """<span class='m'>$(split_digits_html(val; digits, sigdigits, suffix))</span>"""
     style = """
     <style>
         digits.full {
@@ -241,7 +257,7 @@ or alternatively, by using the convenience macro
 [`@default_show_overload`](@ref), which expands to functionally equivalent
 method definitions.
 
-Per-type customization of default show can then be achieved by optionally adding a specific method for the following functions:
+Per-type customization of default show can then be achieved by optionally adding a specific method for the following functions (none are exported, so qualify with `PlutoShowHelpers.` when extending):
 - [`show_namedtuple`](@ref)
 - [`repl_summary`](@ref)
 - [`longname`](@ref)
@@ -296,6 +312,7 @@ end
 
 show_outside_pluto(io::IO, x::DefaultShowOverload) = show_outside_pluto(io, unwrap(x))
 
+"""Placeholder that renders as `…` (compact) or `⋮` (expanded)."""
 struct Ellipsis <: CustomShowable end
 
 Base.show(io::IO, x::Ellipsis) = print(io, get(CONTEXT[], MIME, missing) isa MIME ? VDOTS : HDOTS)
