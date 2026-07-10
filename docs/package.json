@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "docs:dev": "vitepress dev build/.documenter",
+    "docs:build": "vitepress build build/.documenter",
+    "docs:preview": "vitepress preview build/.documenter"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-tabs": "^0.8.0",
+    "@mdit/plugin-tex": "^0.24.1",
+    "markdown-it-footnote": "^4.0.0",
+    "@nolebase/vitepress-plugin-enhanced-readabilities": "^2.18.2"
+  },
+  "dependencies": {
+    "@mathjax/src": "*"
+  }
+}
