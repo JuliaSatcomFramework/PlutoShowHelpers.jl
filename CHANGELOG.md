@@ -2,6 +2,18 @@
 
 This file contains the changelog for the PlutoShowHelpers package. It follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.3.6] - 2026-07-10
+
+### Fixed
+- `DisplayLength.show_inside_pluto` now uses `abs()` for the km threshold and divides by 1000 for km display
+- `show_outside_pluto` docstring updated to match the actual 2-arg `show` fallback (changed in v0.2.0)
+- `AsPlutoTree` docstring grammar fixes
+- CHANGELOG package name corrected from "ReferenceViews"
+
+### Added
+- Docstrings for `InsidePluto`, `OutsidePluto`, `HideWhenCompact`, `HideWhenFull`, `HideAlways`, `DisplayLength`, `Ellipsis`, `longname`, `shortname`, `repl_summary`
+- User-facing documentation using DocumenterVitepress with quickstart, guide, utility types, and API reference pages
+
 ## [0.3.5] - 2025-05-28
 
 ### Added
