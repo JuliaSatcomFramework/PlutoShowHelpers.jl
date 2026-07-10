@@ -1,6 +1,6 @@
 # Changelog
 
-This file contains the changelog for the ReferenceViews package. It follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
+This file contains the changelog for the PlutoShowHelpers package. It follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ## [0.3.5] - 2025-05-28
 

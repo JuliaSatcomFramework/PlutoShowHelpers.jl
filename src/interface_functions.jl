@@ -20,7 +20,7 @@ This function is used inside the show method for subtypes of
 [`AsPlutoTree`](@ref), for MIME of type `text/html` only if the passed `io` is
 outside Pluto.
 
-This function defaults to calling [`show`](@ref) with MIME of type `text/plain` if not overloaded for the specific type of `x`.
+This function defaults to calling 2-arg `show(io, x)` if not overloaded for the specific type of `x`.
 """
 function show_outside_pluto(io::IO, x)
     @nospecialize
@@ -28,13 +28,27 @@ function show_outside_pluto(io::IO, x)
     show(io, x)
 end
 
-# Customize shown names of type
+"""
+    longname(x)
+Return the full display name for `x`, used as the tree header inside Pluto
+and by [`AsPlutoTree`](@ref). Defaults to `nameof(typeof(x))`.
+"""
 longname(@nospecialize(x)) = longname(typeof(x))
 longname(x::DataType) = nameof(x) |> string
+
+"""
+    shortname(x)
+Return the compact display name for `x`, used in 2-arg `show` as `ShortName(…)`.
+Defaults to `nameof(typeof(x))`.
+"""
 shortname(@nospecialize(x)) = shortname(typeof(x))
 shortname(x::DataType) = nameof(x) |> string
 
-# This needs to be overloaded if one wants custom multiline type name in the REPL
+"""
+    repl_summary(x)
+Return the header line for the 3-arg `text/plain` show: `Summary:\\n  field = …`.
+Defaults to `Base.summary(x)`.
+"""
 repl_summary(@nospecialize(x)) = Base.summary(x)
 
 """
