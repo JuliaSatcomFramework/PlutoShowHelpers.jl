@@ -219,6 +219,11 @@ end
 
     s = repr(MIME"text/html"(), DisplayLength(1234.567); context)
     @test contains(s, "class='m'")
+    @test contains(s, " km")
+
+    s = repr(MIME"text/html"(), DisplayLength(456.789); context)
+    @test contains(s, "class='m'")
+    @test contains(s, " m")
 
     s = repr(MIME"text/html"(), Ellipsis(); context)
     @test contains(s, "<ellipsis></ellipsis>")
