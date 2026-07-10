@@ -1,19 +1,54 @@
 # PlutoShowHelpers
 
-[![Stable Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://disberd.github.io/PlutoShowHelpers.jl/stable)
-[![In development documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://disberd.github.io/PlutoShowHelpers.jl/dev)
-[![Build Status](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/workflows/Test/badge.svg)](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/actions)
+[![Stable Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://JuliaSatcomFramework.github.io/PlutoShowHelpers.jl/stable)
+[![In development documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaSatcomFramework.github.io/PlutoShowHelpers.jl/dev)
 [![Test workflow status](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/actions/workflows/Test.yml/badge.svg?branch=main)](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/actions/workflows/Test.yml?query=branch%3Amain)
-[![Lint workflow Status](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/actions/workflows/Lint.yml/badge.svg?branch=main)](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/actions/workflows/Lint.yml?query=branch%3Amain)
 [![Docs workflow Status](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/actions/workflows/Docs.yml/badge.svg?branch=main)](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/actions/workflows/Docs.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaSatcomFramework/PlutoShowHelpers.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaSatcomFramework/PlutoShowHelpers.jl)
-[![BestieTemplate](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JuliaBesties/BestieTemplate.jl/main/docs/src/assets/badge.json)](https://github.com/JuliaBesties/BestieTemplate.jl)
 
-This package provides some convenience type and methods to simplify overloading `show` methods for custom types both inside and outside of Pluto.
+A framework for customizing `show` methods on Julia types so they render well across different contexts:
 
-## How to Cite
+- **REPL** — compact single-line (`show(io, x)`) and expanded multi-line (`show(io, MIME"text/plain"(), x)`) representations
+- **Pluto notebooks** — interactive collapsible tree structures with per-field visibility control
+- **Other HTML environments** — via `show_outside_pluto` fallback
 
-If you use PlutoShowHelpers.jl in your work, please cite using the reference
-given in
-[CITATION.cff](https://github.com/JuliaSatcomFramework/PlutoShowHelpers.jl/blob/main/CITATION.cff).
+Define a single [`show_namedtuple`](https://JuliaSatcomFramework.github.io/PlutoShowHelpers.jl/stable/guide/) method to control which fields are shown and how they are transformed, and the package handles rendering in each context automatically.
 
+## Quick Example
+
+```julia
+using PlutoShowHelpers
+
+struct Satellite
+    name::String
+    altitude_km::Float64
+    inclination_deg::Float64
+    active::Bool
+end
+
+@default_show_overload Satellite
+
+PlutoShowHelpers.show_namedtuple(s::Satellite) = (;
+    name = s.name,
+    altitude = s.altitude_km,
+    inclination = s.inclination_deg,
+    active = HideWhenCompact(s.active),  # hidden in compact view
+)
+
+PlutoShowHelpers.shortname(::Satellite) = "Sat"
+PlutoShowHelpers.repl_summary(s::Satellite) = "Satellite($(s.name))"
+```
+
+```
+julia> Satellite("ISS", 408.0, 51.6, true)
+Satellite(ISS):
+  name = "ISS"
+  altitude = 408.0
+  inclination = 51.6
+  active = true
+
+julia> show(stdout, Satellite("ISS", 408.0, 51.6, true))
+Sat("ISS", 408.0, 51.6)
+```
+
+See the [documentation](https://JuliaSatcomFramework.github.io/PlutoShowHelpers.jl/stable/) for the full guide, including field visibility control, name customization, nested types, and Pluto-specific rendering.
