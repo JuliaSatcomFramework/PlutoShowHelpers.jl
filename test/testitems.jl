@@ -281,3 +281,62 @@ end
     @test contains(repr(MIME"text/html"(), st), "Override!")
     @test contains(repr(MIME"text/plain"(), st), "Override!")
 end
+
+# Tagged :after because disable_html_show! adds Base.showable methods for types owned by
+# neither Base nor PlutoShowHelpers, which the Aqua piracy check flags if it runs later.
+@testitem "disable_html_show!" tags = [:after] begin
+    using PlutoShowHelpers
+    using PlutoShowHelpers: disable_html_show!, uses_default_html_show, CustomShowable
+    using Test
+
+    struct ViaMacro
+        x::Int
+    end
+    @default_show_overload ViaMacro
+
+    struct ViaSubtyping <: CustomShowable
+        x::Int
+    end
+    PlutoShowHelpers.show_outside_pluto(io::IO, v::ViaSubtyping) = print(io, "<b>", v.x, "</b>")
+
+    struct StaysHTML
+        x::Int
+    end
+    @default_show_overload StaysHTML
+
+    struct NoOverload
+        x::Int
+    end
+
+    # The trait is declared by the macro and by CustomShowable, and by nothing else.
+    @test uses_default_html_show(ViaMacro)
+    @test uses_default_html_show(ViaSubtyping)
+    @test !uses_default_html_show(NoOverload)
+
+    m, s, k = ViaMacro(1), ViaSubtyping(2), StaysHTML(3)
+
+    # No pre-state assertion for `s`: the method disabling it is installed on the abstract
+    # CustomShowable, so it survives in a reused test process and catches any later subtype.
+    @test showable(MIME"text/html"(), m)
+    @test showable(MIME"text/html"(), k)
+
+    plain_before = repr(MIME"text/plain"(), m)
+    html_before = repr(MIME"text/html"(), s)
+
+    disabled = disable_html_show!(; exclude = (StaysHTML,))
+
+    @test ViaMacro in disabled
+    @test CustomShowable in disabled
+    @test StaysHTML ∉ disabled
+
+    # ViaMacro is disabled by its own method, ViaSubtyping by the abstract CustomShowable
+    # method alone, StaysHTML kept by an explicit `= true`.
+    @test !invokelatest(showable, MIME"text/html"(), m)
+    @test !invokelatest(showable, MIME"text/html"(), s)
+    @test invokelatest(showable, MIME"text/html"(), k)
+
+    # Only MIME negotiation changes; rendering is untouched. `repr` calls `show` directly
+    # and never consults `showable`, so HTML is still produced on demand.
+    @test invokelatest(repr, MIME"text/plain"(), m) == plain_before
+    @test invokelatest(repr, MIME"text/html"(), s) == html_before == "<b>2</b>"
+end
