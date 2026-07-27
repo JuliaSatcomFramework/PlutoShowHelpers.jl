@@ -12,6 +12,14 @@ on how a type is shown.
 uses_default_html_show(::Type) = false
 uses_default_html_show(::Type{<:CustomShowable}) = true
 
+# Set by disable_html_show! and read by @default_show_overload at macro-expansion time, so
+# that types defined after that call — such as those defined inside a Documenter @example
+# block — are hidden from text/html rendering as well.
+#
+# Precompilation always runs in a fresh process where this is false, so the conditional
+# method can never be baked into a downstream package's cache.
+const HTML_SHOW_DISABLED = Ref(false)
+
 # Recover `T` from the `::Type{<:T}` (or `::Type{T}`) annotation of a
 # `uses_default_html_show` method. Returns `nothing` for the `::Type` fallback, whose type
 # variable is bounded by `Any`.
@@ -48,11 +56,11 @@ blocks are text-only to begin with and are unaffected.
 Call it once per documentation build, either from `make.jl` before `makedocs`, or from a
 Documenter `@setup` block. See the guide for worked examples.
 
-Only types that already exist when it runs get a method, so call it after loading the
-packages whose types you are documenting. Types defined later — for instance by a
-[`@default_show_overload`](@ref) inside an `@example` block — need another call afterwards.
-Subtypes of [`CustomShowable`](@ref) are exempt: their method is installed on the abstract
-type and therefore also covers subtypes defined later.
+Types defined after the call are covered too: subtypes of [`CustomShowable`](@ref) through
+the method installed on the abstract type, and [`@default_show_overload`](@ref) types
+because the macro checks whether this function has run and emits the `showable` method
+itself. A single call therefore covers a whole build, including types defined inside
+`@example` blocks.
 
 `extra` covers types whose `text/html` show method was written by hand rather than through
 [`@default_show_overload`](@ref) or by subtyping [`CustomShowable`](@ref).
@@ -70,6 +78,7 @@ the same top-level expression that calls it; use `Base.invokelatest` if you need
 Documenter block is evaluated separately, so this does not arise in a docs build.
 """
 function disable_html_show!(extra::Type...; exclude = ())
+    HTML_SHOW_DISABLED[] = true
     excluded = collect(Type, exclude)
     traited = Type[T for T in map(_traited_type, methods(uses_default_html_show)) if T !== nothing]
     types = setdiff(vcat(traited, collect(Type, extra)), excluded)

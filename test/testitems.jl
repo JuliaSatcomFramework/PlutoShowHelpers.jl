@@ -339,4 +339,14 @@ end
     # and never consults `showable`, so HTML is still produced on demand.
     @test invokelatest(repr, MIME"text/plain"(), m) == plain_before
     @test invokelatest(repr, MIME"text/html"(), s) == html_before == "<b>2</b>"
+
+    # A type registered after the call is covered too: the macro sees the flag at expansion
+    # time. @eval defers that expansion past the disable_html_show! call above, which the
+    # surrounding testitem body has already been expanded before running.
+    @eval struct DefinedAfter
+        x::Int
+    end
+    @eval @default_show_overload DefinedAfter
+    @test !invokelatest(showable, MIME"text/html"(), invokelatest(DefinedAfter, 4))
+    @test contains(invokelatest(repr, MIME"text/plain"(), invokelatest(DefinedAfter, 4)), "x = 4")
 end

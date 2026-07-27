@@ -36,10 +36,6 @@ struct Orbit
 end
 
 @default_show_overload Orbit
-
-# Orbit is defined here rather than in a loaded package, so it is registered after the
-# disable_html_show! call in make.jl. See "Using These Types in Documenter" below.
-PlutoShowHelpers.disable_html_show!()
 nothing # hide
 ```
 
@@ -350,13 +346,11 @@ PlutoShowHelpers.disable_html_show!(MyHandWrittenType; exclude = (MyPlotType,))
 this. The call also leaves `show(io, MIME"text/html"(), x)` and Pluto rendering untouched —
 it changes only which MIME Documenter asks for.
 
-!!! note "Call it after your types are defined"
-    `disable_html_show!` only gives a method to types that exist when it runs. Calling it
-    in `make.jl` after `using MyPackage` covers everything that package defines. A type
-    registered later — such as one defined with [`@default_show_overload`](@ref) inside an
-    `@example` block, as on this page — needs another call after its definition. Subtypes
-    of [`CustomShowable`](@ref) are exempt, because their method is installed on the
-    abstract type and so covers subtypes defined at any point.
+One call covers the whole build, including types that do not exist yet when it runs.
+Subtypes of [`CustomShowable`](@ref) are caught because their method sits on the abstract
+type, and [`@default_show_overload`](@ref) checks whether the call has happened and emits
+the `showable` method itself — so a type defined inside an `@example` block, like the
+`Orbit` above, is covered without a second call.
 
 This documentation is built with the call in place, so the `@example` blocks throughout
 this guide show the same output you would get in the REPL.
