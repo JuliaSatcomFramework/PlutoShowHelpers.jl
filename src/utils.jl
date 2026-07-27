@@ -159,19 +159,38 @@ end
 """
     @default_show_overload TYPE
     
-This convenience macro simplifies the overload of the show methods for a given `TYPE` by expanding to the following three method definitions:
+This convenience macro simplifies the overload of the show methods for a given `TYPE` by expanding to the following method definitions:
 ```julia
 Base.show(io::IO, x::TYPE) = show(io, PlutoShowHelpers.DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/html", x::TYPE) = show(io, mime, PlutoShowHelpers.DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/plain", x::TYPE) = show(io, mime, PlutoShowHelpers.DefaultShowOverload(x))
+PlutoShowHelpers.uses_default_html_show(::Type{<:TYPE}) = true
 ```
 
-See also: [`DefaultShowOverload`](@ref)
+The last of these registers `TYPE` with [`disable_html_show!`](@ref), and has no effect on
+how `TYPE` is shown.
+
+If [`disable_html_show!`](@ref) has already been called in the current process, the macro
+additionally emits
+
+```julia
+Base.showable(::MIME"text/html", ::TYPE) = false
+```
+
+so that types defined during a documentation build are hidden from `text/html` rendering
+like the ones that existed when that call was made.
+
+See also: [`DefaultShowOverload`](@ref), [`disable_html_show!`](@ref)
 """
 macro default_show_overload(TYPE)
-    quote
+    ex = quote
         Base.show(io::IO, x::$TYPE) = show(io, $DefaultShowOverload(x))
         Base.show(io::IO, mime::MIME"text/html", x::$TYPE) = show(io, mime, $DefaultShowOverload(x))
         Base.show(io::IO, mime::MIME"text/plain", x::$TYPE) = show(io, mime, $DefaultShowOverload(x))
-    end |> esc
+        $(PlutoShowHelpers).uses_default_html_show(::Type{<:$TYPE}) = return true
+    end
+    if HTML_SHOW_DISABLED[]
+        push!(ex.args, :(Base.showable(::MIME"text/html", ::$TYPE) = return false))
+    end
+    return esc(ex)
 end

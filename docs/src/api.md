@@ -34,3 +34,10 @@ PlutoShowHelpers.repl_summary
 ```@docs
 @default_show_overload
 ```
+
+## Documenter Integration
+
+```@docs
+PlutoShowHelpers.disable_html_show!
+PlutoShowHelpers.uses_default_html_show
+```
