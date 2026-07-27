@@ -286,32 +286,55 @@ end
 # neither Base nor PlutoShowHelpers, which the Aqua piracy check flags if it runs later.
 @testitem "disable_html_show!" tags = [:after] begin
     using PlutoShowHelpers
-    using PlutoShowHelpers: disable_html_show!, uses_default_html_show, CustomShowable
+    using PlutoShowHelpers: disable_html_show!, uses_default_html_show, CustomShowable, HTML_SHOW_DISABLED
     using Test
 
-    struct ViaMacro
-        x::Int
-    end
-    @default_show_overload ViaMacro
+    # A reused worker still carries HTML_SHOW_DISABLED from an earlier run of this item, and
+    # `Core.eval` expands every macro in a block before running any of it. The definitions
+    # below are therefore @eval'd so they expand after this reset rather than before it.
+    HTML_SHOW_DISABLED[] = false
 
-    struct ViaSubtyping <: CustomShowable
-        x::Int
-    end
-    PlutoShowHelpers.show_outside_pluto(io::IO, v::ViaSubtyping) = print(io, "<b>", v.x, "</b>")
+    @eval begin
+        struct ViaMacro
+            x::Int
+        end
+        @default_show_overload ViaMacro
 
-    struct StaysHTML
-        x::Int
-    end
-    @default_show_overload StaysHTML
+        struct ViaSubtyping <: CustomShowable
+            x::Int
+        end
+        PlutoShowHelpers.show_outside_pluto(io::IO, v::ViaSubtyping) = print(io, "<b>", v.x, "</b>")
 
-    struct NoOverload
-        x::Int
+        struct StaysHTML
+            x::Int
+        end
+        @default_show_overload StaysHTML
+
+        # A Union rather than a concrete type or an abstract supertype.
+        struct UnionA end
+        struct UnionB end
+        @default_show_overload Union{UnionA, UnionB}
+
+        # The trait declared invariantly by hand, over a type whose text/html show method
+        # was also written by hand rather than produced by the macro.
+        struct Invariant end
+        Base.show(io::IO, ::MIME"text/html", ::Invariant) = print(io, "<i></i>")
+        PlutoShowHelpers.uses_default_html_show(::Type{Invariant}) = true
+
+        struct NoOverload
+            x::Int
+        end
     end
 
-    # The trait is declared by the macro and by CustomShowable, and by nothing else.
+    # The trait is declared by the macro, by CustomShowable, and by the hand-written method.
     @test uses_default_html_show(ViaMacro)
     @test uses_default_html_show(ViaSubtyping)
+    @test uses_default_html_show(Invariant)
     @test !uses_default_html_show(NoOverload)
+
+    # A Union registration covers each of its members.
+    @test uses_default_html_show(UnionA)
+    @test uses_default_html_show(UnionB)
 
     m, s, k = ViaMacro(1), ViaSubtyping(2), StaysHTML(3)
 
@@ -319,6 +342,9 @@ end
     # CustomShowable, so it survives in a reused test process and catches any later subtype.
     @test showable(MIME"text/html"(), m)
     @test showable(MIME"text/html"(), k)
+    @test showable(MIME"text/html"(), Invariant())
+    @test showable(MIME"text/html"(), UnionA())
+    @test showable(MIME"text/html"(), UnionB())
 
     plain_before = repr(MIME"text/plain"(), m)
     html_before = repr(MIME"text/html"(), s)
@@ -327,7 +353,14 @@ end
 
     @test ViaMacro in disabled
     @test CustomShowable in disabled
+    @test Invariant in disabled
+    @test Union{UnionA, UnionB} in disabled
     @test StaysHTML ∉ disabled
+
+    # A Union is disabled by a single method covering both members.
+    @test !invokelatest(showable, MIME"text/html"(), UnionA())
+    @test !invokelatest(showable, MIME"text/html"(), UnionB())
+    @test !invokelatest(showable, MIME"text/html"(), Invariant())
 
     # ViaMacro is disabled by its own method, ViaSubtyping by the abstract CustomShowable
     # method alone, StaysHTML kept by an explicit `= true`.

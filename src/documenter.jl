@@ -9,8 +9,8 @@ This trait exists so that [`disable_html_show!`](@ref) can find those types by w
 `methods(uses_default_html_show)`. Nothing else consults it, and declaring it has no effect
 on how a type is shown.
 """
-uses_default_html_show(::Type) = false
-uses_default_html_show(::Type{<:CustomShowable}) = true
+uses_default_html_show(::Type) = return false
+uses_default_html_show(::Type{<:CustomShowable}) = return true
 
 # Set by disable_html_show! and read by @default_show_overload at macro-expansion time, so
 # that types defined after that call — such as those defined inside a Documenter @example
@@ -22,17 +22,14 @@ const HTML_SHOW_DISABLED = Ref(false)
 
 # Recover `T` from the `::Type{<:T}` (or `::Type{T}`) annotation of a
 # `uses_default_html_show` method. Returns `nothing` for the `::Type` fallback, whose type
-# variable is bounded by `Any`.
+# variable is bounded by `Any`, and for any annotation that is not a type.
 function _traited_type(m::Method)
     T = m.sig.parameters[2]
-    if T isa UnionAll
+    if T isa UnionAll # `::Type{<:T}`, and the `::Type` fallback where the bound is `Any`
         ub = T.var.ub
         return ub === Any ? nothing : ub
-    elseif T isa DataType && T <: Type && length(T.parameters) == 1
-        p = T.parameters[1]
-        return p isa Type ? p : nothing
     end
-    return nothing
+    return T isa DataType && T <: Type && length(T.parameters) == 1 ? T.parameters[1] : nothing
 end
 
 """
