@@ -2,6 +2,12 @@
 
 This file contains the changelog for the PlutoShowHelpers package. It follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Added
+- `disable_html_show!` — an opt-in call for documentation builds that makes Documenter render types handled by this package with their REPL (`text/plain`) representation instead of their HTML one. Documenter's `@example` blocks pick the richest MIME a value supports and gate that choice on `Base.showable`, so without it they render through `show_outside_pluto` rather than the REPL form. Call it once from `make.jl` before `makedocs`, or from a `@setup` block. Types defined afterwards are covered too, including those registered inside `@example` blocks. Accepts extra types positionally for hand-written `text/html` show methods, and an `exclude` keyword for types that should keep rendering as HTML.
+- `uses_default_html_show` — the trait `disable_html_show!` uses to find those types. Declared for `CustomShowable` and emitted by `@default_show_overload`; it has no effect on how a type is shown.
+
 ## [0.3.6] - 2026-07-10
 
 ### Fixed
