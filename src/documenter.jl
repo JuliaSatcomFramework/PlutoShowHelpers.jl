@@ -48,6 +48,12 @@ blocks are text-only to begin with and are unaffected.
 Call it once per documentation build, either from `make.jl` before `makedocs`, or from a
 Documenter `@setup` block. See the guide for worked examples.
 
+Only types that already exist when it runs get a method, so call it after loading the
+packages whose types you are documenting. Types defined later — for instance by a
+[`@default_show_overload`](@ref) inside an `@example` block — need another call afterwards.
+Subtypes of [`CustomShowable`](@ref) are exempt: their method is installed on the abstract
+type and therefore also covers subtypes defined later.
+
 `extra` covers types whose `text/html` show method was written by hand rather than through
 [`@default_show_overload`](@ref) or by subtyping [`CustomShowable`](@ref).
 

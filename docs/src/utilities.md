@@ -15,11 +15,9 @@ and radians. In compact contexts only degrees are shown.
 using PlutoShowHelpers
 
 a = DualDisplayAngle(π/4)
-nothing # hide
 ```
 
 ```@repl angles
-a
 repr(a)
 ```
 
@@ -48,11 +46,9 @@ to km when the absolute value reaches 1000 m.
 using PlutoShowHelpers
 
 l = DisplayLength(456.789)
-nothing # hide
 ```
 
 ```@repl lengths
-l
 DisplayLength(12345.6)
 DisplayLength(-7500.0; digits=1)
 DisplayLength(NaN)

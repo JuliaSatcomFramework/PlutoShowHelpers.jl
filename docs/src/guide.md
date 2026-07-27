@@ -36,6 +36,10 @@ struct Orbit
 end
 
 @default_show_overload Orbit
+
+# Orbit is defined here rather than in a loaded package, so it is registered after the
+# disable_html_show! call in make.jl. See "Using These Types in Documenter" below.
+PlutoShowHelpers.disable_html_show!()
 nothing # hide
 ```
 
@@ -48,7 +52,7 @@ Base.show(io::IO, mime::MIME"text/plain", x::Orbit) = show(io, mime, DefaultShow
 
 Without any further customization, all fields are shown using their original names:
 
-```@repl guide
+```@example guide
 orb = Orbit(7000.0, 0.001, 0.9, 1.2, 0.5, 0.0)
 ```
 
@@ -304,6 +308,58 @@ repr(Config(:gpu, 8, false))
 ```
 
 The `backend` field keeps its label in the compact form while `threads` does not.
+
+## Using These Types in Documenter
+
+Documenter's `@example` blocks display a result using the richest MIME type the value
+supports, and ask `Base.showable` which those are. Because `@default_show_overload` and
+[`CustomShowable`](@ref) both define a `text/html` method, `@example` blocks pick HTML —
+which outside Pluto falls back to
+[`show_outside_pluto`](@ref PlutoShowHelpers.show_outside_pluto) and is rarely what you
+want in a manual.
+
+Call [`disable_html_show!`](@ref PlutoShowHelpers.disable_html_show!) once per build to
+make those blocks use the REPL (`text/plain`) rendering instead. Either from `make.jl`,
+before `makedocs`:
+
+```julia
+using MyPackage
+using PlutoShowHelpers
+
+PlutoShowHelpers.disable_html_show!()
+```
+
+or from a `@setup` block in a page:
+
+````markdown
+```@setup tutorial
+using PlutoShowHelpers
+PlutoShowHelpers.disable_html_show!()
+```
+````
+
+It picks up every type registered by [`@default_show_overload`](@ref) and every subtype of
+[`CustomShowable`](@ref). Pass types whose `text/html` show you wrote by hand as positional
+arguments, and types that should keep rendering as HTML via `exclude`:
+
+```julia
+PlutoShowHelpers.disable_html_show!(MyHandWrittenType; exclude = (MyPlotType,))
+```
+
+`@repl` blocks never consult `showable`, so they are already text-only and need none of
+this. The call also leaves `show(io, MIME"text/html"(), x)` and Pluto rendering untouched —
+it changes only which MIME Documenter asks for.
+
+!!! note "Call it after your types are defined"
+    `disable_html_show!` only gives a method to types that exist when it runs. Calling it
+    in `make.jl` after `using MyPackage` covers everything that package defines. A type
+    registered later — such as one defined with [`@default_show_overload`](@ref) inside an
+    `@example` block, as on this page — needs another call after its definition. Subtypes
+    of [`CustomShowable`](@ref) are exempt, because their method is installed on the
+    abstract type and so covers subtypes defined at any point.
+
+This documentation is built with the call in place, so the `@example` blocks throughout
+this guide show the same output you would get in the REPL.
 
 ## Advanced Patterns
 
