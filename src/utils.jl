@@ -187,10 +187,10 @@ macro default_show_overload(TYPE)
         Base.show(io::IO, x::$TYPE) = show(io, $DefaultShowOverload(x))
         Base.show(io::IO, mime::MIME"text/html", x::$TYPE) = show(io, mime, $DefaultShowOverload(x))
         Base.show(io::IO, mime::MIME"text/plain", x::$TYPE) = show(io, mime, $DefaultShowOverload(x))
-        $(PlutoShowHelpers).uses_default_html_show(::Type{<:$TYPE}) = true
+        $(PlutoShowHelpers).uses_default_html_show(::Type{<:$TYPE}) = return true
     end
     if HTML_SHOW_DISABLED[]
-        push!(ex.args, :(Base.showable(::MIME"text/html", ::$TYPE) = false))
+        push!(ex.args, :(Base.showable(::MIME"text/html", ::$TYPE) = return false))
     end
     return esc(ex)
 end
