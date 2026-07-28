@@ -50,4 +50,13 @@ The compact (2-arg) form hides field labels by default and omits `active` becaus
 show(stdout, sat)
 ```
 
-See the [Guide](@ref guide) for the full set of customization options.
+## Where to go next
+
+- [How It Works](@ref concepts) — the dispatch model, the Pluto/non-Pluto split, and why
+  customization goes through a single `NamedTuple`.
+- [How-to Guide](@ref guide) — recipes for hiding fields, renaming, nesting, and
+  context-specific rendering.
+- [Use These Types in Documenter](@ref documenter) — make `@example` blocks in your own
+  docs render as text rather than HTML.
+- [Utility Types](@ref) and the [API Reference](@ref) — ready-made display types, and exact
+  signatures and defaults.

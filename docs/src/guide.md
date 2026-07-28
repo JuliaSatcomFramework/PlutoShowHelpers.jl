@@ -2,26 +2,19 @@
 CurrentModule = PlutoShowHelpers
 ```
 
-# [Guide](@id guide)
+# [How-to Guide](@id guide)
 
-## How Show Dispatch Works
+Recipes for common display tasks. Each section is self-contained — jump to the one that
+matches your problem. For the model behind these recipes, see [How It Works](@ref concepts);
+for exact signatures and defaults, see the [API Reference](@ref).
 
-Julia's `show` system has multiple methods that fire in different contexts:
+!!! note
+    `show_namedtuple` and the other interface functions are **not exported**. Extend them
+    as `PlutoShowHelpers.show_namedtuple(...)`.
 
-| Method | When it fires |
-|--------|--------------|
-| `show(io, x)` | 2-arg: string interpolation, `repr(x)`, compact contexts |
-| `show(io, MIME"text/plain"(), x)` | 3-arg: REPL display, multi-line output |
-| `show(io, MIME"text/html"(), x)` | HTML rendering (Pluto, Jupyter, docs) |
+## Give your type customized show methods
 
-PlutoShowHelpers hooks into `text/html` to detect whether the output is going to Pluto, and provides separate rendering paths for each context. The [`DefaultShowOverload`](@ref) type handles all three `show` methods with a single customization point.
-
-## DefaultShowOverload
-
-[`DefaultShowOverload`](@ref) is the main entry point. Wrap your type in it and you get
-customizable show methods for all three contexts.
-
-The easiest way to set this up is the [`@default_show_overload`](@ref) macro:
+Apply [`@default_show_overload`](@ref) to the type:
 
 ```@example guide
 using PlutoShowHelpers
@@ -40,27 +33,29 @@ nothing # hide
 ```
 
 This is equivalent to defining:
+
 ```julia
 Base.show(io::IO, x::Orbit) = show(io, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/html", x::Orbit) = show(io, mime, DefaultShowOverload(x))
 Base.show(io::IO, mime::MIME"text/plain", x::Orbit) = show(io, mime, DefaultShowOverload(x))
 ```
 
-Without any further customization, all fields are shown using their original names:
+Without further customization, all fields are shown using their original names:
 
 ```@example guide
 orb = Orbit(7000.0, 0.001, 0.9, 1.2, 0.5, 0.0)
 ```
 
-## Customizing Fields with `show_namedtuple`
+To cover several types at once, pass a `Union`:
 
-[`show_namedtuple`](@ref) is the primary customization point. It takes an instance of
-your type and returns a `NamedTuple` specifying which fields to show and how to
-transform them.
+```julia
+@default_show_overload Union{Engine, Spacecraft}
+```
 
-!!! note
-    `show_namedtuple` and other interface functions are **not exported**. Extend them
-    as `PlutoShowHelpers.show_namedtuple(...)`.
+## Choose which fields appear, and rename them
+
+Add a method to [`show_namedtuple`](@ref PlutoShowHelpers.show_namedtuple) returning a
+`NamedTuple`. The keys become the displayed labels, the values the displayed content:
 
 ```@example guide
 PlutoShowHelpers.show_namedtuple(o::Orbit) = (;
@@ -74,33 +69,21 @@ PlutoShowHelpers.show_namedtuple(o::Orbit) = (;
 nothing # hide
 ```
 
-Now the 3-arg (expanded) show uses the custom field names:
+The 3-arg (expanded) show now uses the custom field names:
 
 ```@repl guide
 orb
 ```
 
-And the 2-arg (compact) show hides fields wrapped in `HideWhenCompact`:
+and the 2-arg (compact) show drops the fields wrapped in `HideWhenCompact`:
 
 ```@repl guide
 repr(orb)
 ```
 
-### Different Fields for Pluto vs. REPL
+## Hide a field in some contexts
 
-`show_namedtuple` accepts a second argument to specialize for different contexts:
-
-```julia
-PlutoShowHelpers.show_namedtuple(o::Orbit, ::InsidePluto) = ...   # Pluto tree view
-PlutoShowHelpers.show_namedtuple(o::Orbit, ::OutsidePluto) = ...  # REPL / non-Pluto
-```
-
-Both default to calling the 1-arg version, so you only need the 2-arg form when the
-Pluto and REPL representations should differ.
-
-## Field Visibility
-
-Three wrapper types control when fields appear:
+Wrap the value in one of three markers:
 
 | Wrapper | 2-arg (compact) | 3-arg (expanded) | Pluto collapsed | Pluto expanded |
 |---------|:---:|:---:|:---:|:---:|
@@ -136,9 +119,41 @@ repr(reading)
 
 The `raw` field never appears, and `timestamp` only shows in the expanded view.
 
-## Name Customization
+## Hide a field's label
 
-Three functions control how your type's name appears:
+Use Julia's gensym key syntax (`var"#name"`) in the returned `NamedTuple`. The value is
+still shown, but without the `name = ` prefix:
+
+```@example gensym
+using PlutoShowHelpers
+
+struct Point
+    x::Float64
+    y::Float64
+end
+
+@default_show_overload Point
+
+PlutoShowHelpers.show_namedtuple(p::Point) = (;
+    var"#x" = p.x,
+    var"#y" = p.y,
+)
+
+PlutoShowHelpers.shortname(::Point) = "Point"
+nothing # hide
+```
+
+```@repl gensym
+Point(1.0, 2.0)
+repr(Point(1.0, 2.0))
+```
+
+Each key must still be unique, so number them (`var"#1"`, `var"#2"`, …) when suppressing
+several labels in a row.
+
+## Customize the displayed type name
+
+Three functions control the name, each used in a different context:
 
 | Function | Used in | Default |
 |----------|---------|---------|
@@ -165,67 +180,11 @@ t = MyLongTypeName(42)
 repr(t)
 ```
 
-## Hiding Field Labels
+## [Indicate truncated content](@id ellipsis-guide)
 
-Use Julia's gensym syntax (`var"#name"`) in the `NamedTuple` returned by
-`show_namedtuple` to suppress a field's label. The value is still shown, but
-without the `name = ` prefix. This is especially useful in combination with
-[`Ellipsis`](@ref PlutoShowHelpers.Ellipsis) to show truncated content without
-a distracting label (see the [Ellipsis section](@ref ellipsis-guide) below).
-
-```@example gensym
-using PlutoShowHelpers
-
-struct Point
-    x::Float64
-    y::Float64
-end
-
-@default_show_overload Point
-
-PlutoShowHelpers.show_namedtuple(p::Point) = (;
-    var"#x" = p.x,
-    var"#y" = p.y,
-)
-
-PlutoShowHelpers.shortname(::Point) = "Point"
-nothing # hide
-```
-
-```@repl gensym
-Point(1.0, 2.0)
-repr(Point(1.0, 2.0))
-```
-
-## AsPlutoTree
-
-[`AsPlutoTree`](@ref) wraps any object to render it as Pluto's native interactive tree widget.
-It is useful when you want a custom `text/html` show for non-Pluto contexts but still want
-the tree view inside Pluto:
-
-```julia
-function Base.show(io::IO, mime::MIME"text/html", x::MyType)
-    if is_inside_pluto(io)
-        show(io, mime, AsPlutoTree(x))
-    else
-        # Custom non-Pluto HTML rendering
-    end
-end
-```
-
-Alternatively, making your type a subtype of [`CustomShowable`](@ref) achieves the
-same routing automatically — the `text/html` show dispatches to
-[`show_inside_pluto`](@ref PlutoShowHelpers.show_inside_pluto) or
-[`show_outside_pluto`](@ref PlutoShowHelpers.show_outside_pluto) based on the IO context.
-
-`AsPlutoTree` also accepts optional `class` and `style` keyword arguments for
-CSS customization of the tree container.
-
-## [Ellipsis](@id ellipsis-guide)
-
-[`Ellipsis`](@ref PlutoShowHelpers.Ellipsis) is a display element that renders as horizontal dots (`…`) in compact
-contexts and vertical dots (`⋮`) in expanded contexts. Wrap it in a gensym field to
-indicate truncated content:
+Use [`Ellipsis`](@ref PlutoShowHelpers.Ellipsis) in place of the omitted values. It renders
+as horizontal dots (`…`) in compact contexts and vertical dots (`⋮`) in expanded ones. Pair
+it with a gensym key so it appears without a label:
 
 ```@example ellipsis
 using PlutoShowHelpers
@@ -258,110 +217,64 @@ LargeCollection([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 repr(LargeCollection([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
 ```
 
-## CONTEXT (Experimental)
+## Show different fields in Pluto and the REPL
 
-!!! warning "Experimental API"
-    The `CONTEXT` mechanism is experimental and may change in future versions.
+`show_namedtuple` accepts a second argument for context dispatch:
 
-`CONTEXT` is a package-scoped `ScopedValue` holding a `Dict{Any,Any}` that is set
-during show calls. It allows `show_namedtuple` to communicate with downstream
-rendering (e.g., the `shortname` function or nested show methods).
+```julia
+PlutoShowHelpers.show_namedtuple(o::Orbit, ::InsidePluto) = ...   # Pluto tree view
+PlutoShowHelpers.show_namedtuple(o::Orbit, ::OutsidePluto) = ...  # REPL / non-Pluto
+```
 
-### Showing Labels in 2-arg Show
+Both default to calling the 1-arg version, so define these only when the two
+representations should genuinely differ. A typical case is a large array: worth browsing in
+the Pluto tree, worth collapsing to a size description in the REPL.
 
-By default, the 2-arg (compact) show omits field labels: `MyType(val1, val2, ...)`.
-To opt specific fields into label printing, set `:print_2arg_names` in CONTEXT
-from within `show_namedtuple`:
-
-```@example context
+```@example pluto_repl
 using PlutoShowHelpers
-using PlutoShowHelpers: CONTEXT
 
-struct Config
-    backend::Symbol
-    threads::Int
-    verbose::Bool
+struct SimulationResult
+    timesteps::Int
+    converged::Bool
+    final_error::Float64
+    history::Vector{Float64}
 end
 
-@default_show_overload Config
+@default_show_overload SimulationResult
 
-function PlutoShowHelpers.show_namedtuple(c::Config, ::OutsidePluto)
-    CONTEXT[][:print_2arg_names] = (:backend,)
-    return (;
-        backend = c.backend,
-        threads = c.threads,
-        verbose = HideWhenCompact(c.verbose),
+# REPL: hide the potentially large history vector
+function PlutoShowHelpers.show_namedtuple(r::SimulationResult, ::OutsidePluto)
+    (;
+        timesteps = r.timesteps,
+        converged = r.converged,
+        final_error = r.final_error,
+        history = HideAlways("$(length(r.history)) entries"),
     )
 end
 
-PlutoShowHelpers.shortname(::Config) = "Config"
+# Pluto: show everything, history is navigable in the tree
+PlutoShowHelpers.show_namedtuple(r::SimulationResult, ::InsidePluto) = (;
+    timesteps = r.timesteps,
+    converged = r.converged,
+    final_error = r.final_error,
+    history = r.history,
+)
+
+PlutoShowHelpers.shortname(::SimulationResult) = "SimResult"
+PlutoShowHelpers.repl_summary(r::SimulationResult) = "SimulationResult ($(r.timesteps) steps)"
 nothing # hide
 ```
 
-```@repl context
-Config(:gpu, 8, false)
-repr(Config(:gpu, 8, false))
+```@repl pluto_repl
+SimulationResult(100, true, 1e-8, rand(100))
 ```
 
-The `backend` field keeps its label in the compact form while `threads` does not.
+In Pluto, the full `history` vector is browsable in the interactive tree.
 
-## Using These Types in Documenter
+## Pretty-print a nested custom type
 
-Documenter's `@example` blocks display a result using the richest MIME type the value
-supports, and ask `Base.showable` which those are. Because `@default_show_overload` and
-[`CustomShowable`](@ref) both define a `text/html` method, `@example` blocks pick HTML —
-which outside Pluto falls back to
-[`show_outside_pluto`](@ref PlutoShowHelpers.show_outside_pluto) and is rarely what you
-want in a manual.
-
-Call [`disable_html_show!`](@ref PlutoShowHelpers.disable_html_show!) once per build to
-make those blocks use the REPL (`text/plain`) rendering instead. Either from `make.jl`,
-before `makedocs`:
-
-```julia
-using MyPackage
-using PlutoShowHelpers
-
-PlutoShowHelpers.disable_html_show!()
-```
-
-or from a `@setup` block in a page:
-
-````markdown
-```@setup tutorial
-using PlutoShowHelpers
-PlutoShowHelpers.disable_html_show!()
-```
-````
-
-It picks up every type registered by [`@default_show_overload`](@ref) and every subtype of
-[`CustomShowable`](@ref). Pass types whose `text/html` show you wrote by hand as positional
-arguments, and types that should keep rendering as HTML via `exclude`:
-
-```julia
-PlutoShowHelpers.disable_html_show!(MyHandWrittenType; exclude = (MyPlotType,))
-```
-
-`@repl` blocks never consult `showable`, so they are already text-only and need none of
-this. The call also leaves `show(io, MIME"text/html"(), x)` and Pluto rendering untouched —
-it changes only which MIME Documenter asks for.
-
-One call covers the whole build, including types that do not exist yet when it runs.
-Subtypes of [`CustomShowable`](@ref) are caught because their method sits on the abstract
-type, and [`@default_show_overload`](@ref) checks whether the call has happened and emits
-the `showable` method itself — so a type defined inside an `@example` block, like the
-`Orbit` above, is covered without a second call.
-
-This documentation is built with the call in place, so the `@example` blocks throughout
-this guide show the same output you would get in the REPL.
-
-## Advanced Patterns
-
-### Nested Types
-
-When a type contains fields that are themselves custom types, wrap them in
-[`DefaultShowOverload`](@ref) inside `show_namedtuple` to get recursive
-pretty-printing without type piracy:
+Wrap the nested value in [`DefaultShowOverload`](@ref) inside `show_namedtuple`. This gets
+recursive pretty-printing without committing type piracy:
 
 ```@example nested
 using PlutoShowHelpers
@@ -404,13 +317,12 @@ sc = Spacecraft("Explorer", 1200.0, Engine(4.5, 320.0, :hydrazine))
 show(stdout, sc)
 ```
 
-The `Engine` inside `Spacecraft` renders with its own `shortname` and hiding
-rules. Without the `DefaultShowOverload` wrapper, it would show as a raw struct.
+The `Engine` inside `Spacecraft` renders with its own `shortname` and hiding rules. Without
+the wrapper, it would show as a raw struct.
 
-### Conditional Field Hiding
+## Hide fields that are empty
 
-Use `HideAlways` dynamically to suppress fields that are empty or at their
-default values, keeping the output clean:
+`show_namedtuple` runs per instance, so apply `HideAlways` conditionally:
 
 ```@example conditional
 using PlutoShowHelpers
@@ -445,11 +357,10 @@ Pipeline("build", [:compile, :link], ["link failed"], Dict("retry" => 3))
 
 Empty `errors` and `metadata` are fully hidden; non-empty ones appear.
 
-### Compact Aliases with HideWhenFull
+## Show a computed summary instead of fields in compact view
 
-A common pattern is to show a short computed summary in compact view and the
-full struct fields in expanded view. Use `HideWhenFull` for the compact alias
-and `HideWhenCompact` for the full fields:
+Put the summary behind `HideWhenFull` and the real fields behind `HideWhenCompact`, so the
+two never appear together:
 
 ```@example aliases
 using PlutoShowHelpers
@@ -463,7 +374,6 @@ end
 @default_show_overload GeoCoordinate
 
 function PlutoShowHelpers.show_namedtuple(g::GeoCoordinate, ::OutsidePluto)
-    # Compact alias: shown only in 2-arg show, hidden in expanded view
     compact = HideWhenFull("$(round(g.lat; digits=1))°, $(round(g.lon; digits=1))°")
     (;
         var"#summary" = compact,
@@ -482,13 +392,12 @@ coord = GeoCoordinate(48.8566, 2.3522, 35.0)
 show(stdout, coord)
 ```
 
-The compact form shows just `Geo(48.9°, 2.4°)` while the expanded form shows
-all three fields with their labels.
+The compact form shows just `Geo(48.9°, 2.4°)`, the expanded form all three labelled fields.
 
-### Replacing Non-Displayable Fields
+## Replace a field that does not render usefully
 
-Function-valued fields or large internal buffers don't render well. Replace them
-with [`Ellipsis`](@ref PlutoShowHelpers.Ellipsis) or a descriptive string:
+Function-valued fields and large internal buffers are best swapped for a descriptive value
+or an [`Ellipsis`](@ref PlutoShowHelpers.Ellipsis):
 
 ```@example replace
 using PlutoShowHelpers
@@ -516,50 +425,69 @@ nothing # hide
 Interpolator([0.0, 1.0, 2.0, 3.0], [0.0, 1.0, 4.0, 9.0], x -> x^2)
 ```
 
-### Different Representations for Pluto and REPL
+## [Print field labels in compact show](@id howto-context)
 
-Use the `InsidePluto` / `OutsidePluto` dispatch to show different fields in
-each context. A typical use is showing a compact summary in the REPL while
-providing all fields in the Pluto tree:
+By default the 2-arg show omits labels: `MyType(val1, val2, ...)`. To opt specific fields
+into label printing, set `:print_2arg_names` in `CONTEXT` from within `show_namedtuple`:
 
-```@example pluto_repl
+```@example context
 using PlutoShowHelpers
+using PlutoShowHelpers: CONTEXT
 
-struct SimulationResult
-    timesteps::Int
-    converged::Bool
-    final_error::Float64
-    history::Vector{Float64}
+struct Config
+    backend::Symbol
+    threads::Int
+    verbose::Bool
 end
 
-@default_show_overload SimulationResult
+@default_show_overload Config
 
-# REPL: hide the potentially large history vector
-function PlutoShowHelpers.show_namedtuple(r::SimulationResult, ::OutsidePluto)
-    (;
-        timesteps = r.timesteps,
-        converged = r.converged,
-        final_error = r.final_error,
-        history = HideAlways("$(length(r.history)) entries"),
+function PlutoShowHelpers.show_namedtuple(c::Config, ::OutsidePluto)
+    CONTEXT[][:print_2arg_names] = (:backend,)
+    return (;
+        backend = c.backend,
+        threads = c.threads,
+        verbose = HideWhenCompact(c.verbose),
     )
 end
 
-# Pluto: show everything, history is navigable in the tree
-PlutoShowHelpers.show_namedtuple(r::SimulationResult, ::InsidePluto) = (;
-    timesteps = r.timesteps,
-    converged = r.converged,
-    final_error = r.final_error,
-    history = r.history,
-)
-
-PlutoShowHelpers.shortname(::SimulationResult) = "SimResult"
-PlutoShowHelpers.repl_summary(r::SimulationResult) = "SimulationResult ($(r.timesteps) steps)"
+PlutoShowHelpers.shortname(::Config) = "Config"
 nothing # hide
 ```
 
-```@repl pluto_repl
-SimulationResult(100, true, 1e-8, rand(100))
+```@repl context
+Config(:gpu, 8, false)
+repr(Config(:gpu, 8, false))
 ```
 
-In Pluto, the full `history` vector would be browsable in the interactive tree.
-In the REPL, it's replaced with a compact size description.
+The `backend` field keeps its label in the compact form while `threads` does not.
+
+!!! warning "Experimental API"
+    The `CONTEXT` mechanism is experimental and may change in future versions. See
+    [CONTEXT](@ref concepts) for what it is and why it exists.
+
+## Keep the Pluto tree but hand-write the other HTML
+
+Wrap the object in [`AsPlutoTree`](@ref) on the Pluto branch:
+
+```julia
+function Base.show(io::IO, mime::MIME"text/html", x::MyType)
+    if is_inside_pluto(io)
+        show(io, mime, AsPlutoTree(x))
+    else
+        # Custom non-Pluto HTML rendering
+    end
+end
+```
+
+`AsPlutoTree` also accepts `class` and `style` keyword arguments for CSS customization of
+the tree container.
+
+If you do not need a hand-written non-Pluto branch, subtype [`CustomShowable`](@ref)
+instead — the `text/html` show then routes to
+[`show_inside_pluto`](@ref PlutoShowHelpers.show_inside_pluto) or
+[`show_outside_pluto`](@ref PlutoShowHelpers.show_outside_pluto) automatically.
+
+## Render these types in your own documentation
+
+See [Use These Types in Documenter](@ref documenter).
