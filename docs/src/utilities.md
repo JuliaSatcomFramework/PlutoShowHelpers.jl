@@ -57,5 +57,5 @@ DisplayLength(NaN)
 ## [Ellipsis](@id ellipsis-utility)
 
 [`Ellipsis`](@ref PlutoShowHelpers.Ellipsis) renders as context-appropriate dots — horizontal (`…`) in compact
-(2-arg) show and vertical (`⋮`) in expanded (3-arg) show. See the
-[guide section on Ellipsis](@ref guide) for a usage example.
+(2-arg) show and vertical (`⋮`) in expanded (3-arg) show. See
+[Indicate truncated content](@ref ellipsis-guide) for a usage example.
