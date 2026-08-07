@@ -2,7 +2,10 @@
 
 This file contains the changelog for the PlutoShowHelpers package. It follows the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [Unreleased]
+## [0.3.8] - 2026-08-07
+
+### Added
+- `DualDisplayAngle` and `DisplayLength` accept Unitful quantities when Unitful is loaded, through the new `PlutoShowHelpersUnitfulExt` extension. An angle is converted to radians and a length to meters, so the result matches passing the raw number. `DisplayLength` takes any unit of the `𝐋` dimension. `DualDisplayAngle` takes `°` and `rad` only.
 
 ## [0.3.7] - 2026-07-28
 

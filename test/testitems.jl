@@ -53,6 +53,29 @@ end
     @test repr(l) == "NaN"
 end
 
+@testitem "Unitful quantities" begin
+    using Unitful: @u_str
+
+    # A unitful angle renders as the same angle given in radians.
+    @test repr(DualDisplayAngle(90u"°")) == repr(DualDisplayAngle(π / 2))
+    @test repr(DualDisplayAngle(1.0u"rad")) == repr(DualDisplayAngle(1.0))
+    @test repr(DualDisplayAngle(90u"°"; digits = 2)) == repr(DualDisplayAngle(π / 2; digits = 2))
+    @test repr(DualDisplayAngle(90u"°")) == "90° (1.571 rad)"
+
+    # A unitful length renders as the same length given in meters.
+    @test repr(DisplayLength(1.5u"km")) == repr(DisplayLength(1500.0))
+    @test repr(DisplayLength(123.456u"m")) == repr(DisplayLength(123.456))
+    @test repr(DisplayLength(1u"mi")) == repr(DisplayLength(1609.344))
+    @test repr(DisplayLength(1.5u"km")) == "1.5 km"
+
+    # Other dimensionless units are not angles.
+    @test_throws MethodError DualDisplayAngle(1u"percent")
+    @test_throws MethodError DualDisplayAngle(1u"sr")
+
+    # Logarithmic units are not lengths.
+    @test_throws MethodError DisplayLength(1.0u"dB")
+end
+
 @testitem "Utility Functions" setup = [setup_basics] begin
     using Test
     using PlutoShowHelpers: unwrap, unwrap_hide, random_class
