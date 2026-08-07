@@ -54,6 +54,26 @@ DisplayLength(-7500.0; digits=1)
 DisplayLength(NaN)
 ```
 
+## Unitful quantities
+
+When Unitful is loaded, both wrappers also accept a unitful value. Angles are converted
+to radians and lengths to meters.
+
+```@example unitful
+using PlutoShowHelpers
+using Unitful: @u_str
+
+a = DualDisplayAngle(90u"°")
+```
+
+```@repl unitful
+repr(a)
+repr(DisplayLength(1.5u"km"))
+repr(DisplayLength(1u"mi"))
+```
+
+Any length unit works. Angles accept `°` and `rad` only.
+
 ## [Ellipsis](@id ellipsis-utility)
 
 [`Ellipsis`](@ref PlutoShowHelpers.Ellipsis) renders as context-appropriate dots — horizontal (`…`) in compact
