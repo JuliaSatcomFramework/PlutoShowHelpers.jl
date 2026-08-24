@@ -29,5 +29,6 @@ makedocs(;
 DocumenterVitepress.deploydocs(;
     repo = "github.com/JuliaSatcomFramework/PlutoShowHelpers.jl",
     devbranch = "main",
+    forcepush = true,
     push_preview = true,
 )
